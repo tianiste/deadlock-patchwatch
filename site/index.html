@@ -1,9 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
-<title>Deadlock Patch Ledger</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deadlock Patchwatch: every hero buff and nerf, patch by patch</title>
+<meta name="description" content="Every Deadlock hero buff and nerf from every official patch, with a running buff score for each hero, a win-rate tier list and searchable patch notes.">
+<link rel="canonical" href="https://tianiste.github.io/deadlock-patchwatch/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Deadlock Patchwatch">
+<meta property="og:title" content="Deadlock Patchwatch: every hero buff and nerf, patch by patch">
+<meta property="og:description" content="See how much each Deadlock hero has been buffed or nerfed across every patch, plus a win-rate tier list.">
+<meta property="og:url" content="https://tianiste.github.io/deadlock-patchwatch/">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#13201d">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Limelight&family=Barlow+Semi+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
 <style>
+/* Reset (matches what the artifact host adds) */
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px) }
+body { margin: 0 } img { max-width: 100% } [hidden] { display: none !important }
 /* Layout: a precinct ledger. Title and range on one line, tabs below; roster table with portraits on the left,
    a hero dossier on the right (stacks on phones). Tier list is a wall of portrait cards. Left-aligned throughout. */
 :root {
@@ -115,6 +131,7 @@ tbody tr.sel { background: var(--brass-wash); box-shadow: inset 3px 0 0 var(--br
 .card b { display: block; font-size: 0.85rem; font-weight: 600; line-height: 1.15; margin-top: 4px; overflow-wrap: anywhere }
 .card small { display: block; font-size: 0.8rem; color: var(--faded); font-variant-numeric: tabular-nums }
 @media (max-width: 520px) { .tier { grid-template-columns: 48px minmax(0, 1fr) } .tier .letter { font-size: 1.8rem } .card, .card img { width: 64px } }
+.foot { padding-block: 0 40px; color: var(--faded); font-size: 0.88rem } .foot p { max-width: 80ch; margin: 0; border-top: 1px solid var(--rule); padding-top: 14px } .foot a { color: var(--brass) }
 .note { color: var(--faded); font-size: 0.92rem; margin-top: 14px; max-width: 75ch }
 
 /* patches */
@@ -134,11 +151,13 @@ tbody tr.sel { background: var(--brass-wash); box-shadow: inset 3px 0 0 var(--br
 mark { background: color-mix(in srgb, var(--brass) 38%, transparent); color: inherit; border-radius: 2px }
 @media (prefers-reduced-motion: no-preference) { .dossier .head { animation: rise .25s ease-out } @keyframes rise { from { opacity: .4; transform: translateY(4px) } } }
 </style>
+</head>
+<body>
 
 <header class="wrap top">
   <div>
-    <h1>Deadlock Patch Ledger</h1>
-    <p class="sub" id="sub">Loading patch notes…</p>
+    <h1>Deadlock Patchwatch</h1>
+    <p class="sub" id="sub">Every Deadlock hero buff and nerf from every official patch since November 2024, with a running buff score for each hero and a win-rate tier list.</p>
   </div>
   <label class="range" for="since">Count changes made since
     <select id="since"></select></label>
@@ -180,6 +199,10 @@ mark { background: color-mix(in srgb, var(--brass) 38%, transparent); color: inh
 
   <section id="view-patches" hidden><div id="patchList"></div></section>
 </main>
+
+<footer class="wrap foot">
+  <p>Fan-made, not affiliated with Valve. Patch notes from Valve's official Steam announcements; hero portraits, win rates and pick rates from the community <a href="https://deadlock-api.com" rel="noopener">Deadlock API</a>. Buff and nerf tags are detected automatically from each line's wording. <a href="https://github.com/tianiste/deadlock-patchwatch" rel="noopener">Source on GitHub</a>.</p>
+</footer>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -357,3 +380,5 @@ $("#detail").addEventListener("click", e => {
   overrides[t.dataset.key] = { "1": -1, "-1": 0, "0": 1 }[t.dataset.s]; store.set("overrides", overrides); renderAll();
 });
 </script>
+</body>
+</html>
