@@ -267,7 +267,7 @@ mark { background: var(--hl); color: #100e0e; padding: 0 2px }
 </main>
 
 <footer class="wrap foot">
-  <p>Fan-made, not affiliated with Valve. Patch notes from Valve's official Steam announcements; hero portraits, win rates and pick rates from the community <a href="https://deadlock-api.com" rel="noopener">Deadlock API</a>. Buff and nerf tags are detected automatically from each line's wording. <a href="https://github.com/tianiste/deadlock-patchwatch" rel="noopener">Source on GitHub</a>.</p>
+  <p>Fan-made, not affiliated with Valve. Patch notes from Valve's official Steam announcements; hero portraits, win rates and pick rates from the community <a href="https://deadlock-api.com" rel="noopener">Deadlock API</a>. Every hero change was checked by hand by two independent reviewers, with disagreements settled by a third; changes from newer patches are tagged automatically until they're reviewed. <a href="https://github.com/tianiste/deadlock-patchwatch" rel="noopener">Source on GitHub</a>.</p>
 </footer>
 
 <script>
@@ -380,7 +380,7 @@ function renderDetail() {
         <div><span>Buffs</span><b class="pos">${b}</b></div>
         <div><span>Nerfs</span><b class="neg">${n}</b></div></div></div></div>
     <div class="body"><h3>Running buff score</h3>${trend(pts) || `<p class="hint">Only one patch touched ${esc(selHero)} in this range, so there's no trend yet.</p>`}
-    <p class="hint">Each change counts +1 for a buff and −1 for a nerf. Solid tags were checked by hand, dashed ones are detected automatically; click any tag to correct it. The % shows how much the listed number moved.</p>
+    <p class="hint">Each change counts +1 for a buff and −1 for a nerf. Solid tags were checked by hand; dashed ones are from newer patches and tagged automatically until reviewed. Click any tag to correct it for yourself. The % shows how much the listed number moved.</p>
     ${groups.reverse().map(g => `<div class="pgroup"><header><strong>${esc(g.p.title)}</strong><span>${fmtDate(g.p.date)}, <b class="${cls(g.pnet)}">${signed(g.pnet)}</b></span></header>${(w => w ? `<p class="shift">Win rate the week before <b>${(w.before * 100).toFixed(1)}%</b>, the week after <b>${(w.after * 100).toFixed(1)}%</b> <span class="${cls(w.after - w.before)}">(${w.after >= w.before ? "+" : "−"}${Math.abs((w.after - w.before) * 100).toFixed(1)} pts)</span></p>` : "")(wrShift(g.p.id, selHero))}
       ${g.items.map(({ l, i, s }) => `<div class="chg ${s > 0 ? "b" : s < 0 ? "n" : ""}"><button class="tag${l.r ? "" : " auto"}" data-key="${lineKey(g.p, i)}" data-s="${s}" title="${tagTitle(l)}. Click to change." aria-label="Tagged ${s > 0 ? "buff" : s < 0 ? "nerf" : "neutral"}, ${tagTitle(l).toLowerCase()}, click to change">${s > 0 ? "▲" : s < 0 ? "▼" : "•"}</button><span>${hl(l.t.replace(/^[^:]+:\s*/, ""), q)} ${pctChip(l)}</span></div>`).join("")}</div>`).join("") || `<p class="hint">No changes to ${esc(selHero)} match in this range.</p>`}</div>`;
 }
