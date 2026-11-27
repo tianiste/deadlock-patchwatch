@@ -57,7 +57,7 @@ LOWER_IS_BETTER = re.compile(
     r"cooldown|cast time|cast delay|cast point|windup|wind-up|wind up|delay|startup|charge time|"
     r"channel(ing)? time|lockout|reload time|reload duration|spread|recoil|cost|penalty|self[- ]damage|"
     r"time to|ramp[- ]?up time|backswing|recovery|stamina cooldown|respawn|vulnerab|slower|"
-    r"debuff on (?:self|him|her)|travel time|arming time|lock-?on time|fuse|(?:deploy|activation|spawn) time|time between", re.I)
+    r"debuff on (?:self|him|her)|travel time|arming time|lock-?on time|fuse|(?:deploy|activation|spawn|arm) time|time between", re.I)
 UP = re.compile(r"\b(increased|increase|increases|raised|buffed|improved|extended|longer|faster|more)\b", re.I)
 DOWN = re.compile(r"\b(reduced|reduce|reduces|decreased|decrease|decreases|lowered|nerfed|shorter|slower|less|fewer)\b", re.I)
 NUM = r"[-+]?\d*\.?\d+"
