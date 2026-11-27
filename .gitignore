@@ -1,0 +1,4 @@
+# raw API downloads made by build_data.py
+data/
+__pycache__/
+.claude/settings.local.json

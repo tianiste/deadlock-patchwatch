@@ -1,0 +1,359 @@
+<meta charset="utf-8">
+<title>Deadlock Patch Ledger</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Limelight&family=Barlow+Semi+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<style>
+/* Layout: a precinct ledger. Title and range on one line, tabs below; roster table with portraits on the left,
+   a hero dossier on the right (stacks on phones). Tier list is a wall of portrait cards. Left-aligned throughout. */
+:root {
+  --ground: #e4ebe6; --sheet: #f2f5f1; --ink: #16241f; --faded: #5b6b64; --rule: #c6d3cb;
+  --brass: #8a6420; --buff: #12775b; --nerf: #ad3727;
+  --buff-wash: #12775b17; --nerf-wash: #ad372714; --brass-wash: #8a642020;
+  --deco: "Limelight", "Didot", Georgia, serif;
+  --text: "Barlow Semi Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+  --tS: #b8372b; --tA: #c9721c; --tB: #b8952a; --tC: #4f8c63; --tD: #3f7593; --tF: #6e5b86;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #13201d; --sheet: #1a2a26; --ink: #ebe4cf; --faded: #93a39b; --rule: #2b3d38;
+  --brass: #d1ad62; --buff: #6fdcbc; --nerf: #f0735f;
+  --buff-wash: #6fdcbc17; --nerf-wash: #f0735f17; --brass-wash: #d1ad6224; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --ground: #13201d; --sheet: #1a2a26; --ink: #ebe4cf; --faded: #93a39b; --rule: #2b3d38;
+  --brass: #d1ad62; --buff: #6fdcbc; --nerf: #f0735f;
+  --buff-wash: #6fdcbc17; --nerf-wash: #f0735f17; --brass-wash: #d1ad6224; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--ground); color: var(--ink); font: 400 16px/1.45 var(--text); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+img { display: block }
+
+header.top { padding-block: 30px 14px; display: flex; flex-wrap: wrap; gap: 14px 32px; align-items: end; justify-content: space-between; }
+h1 { font: 400 clamp(2rem, 5.4vw, 3.3rem)/1 var(--deco); margin: 0; letter-spacing: 0.01em; }
+.sub { color: var(--faded); margin: 8px 0 0; max-width: 60ch; font-size: 0.98rem }
+.range { display: grid; gap: 4px; font-size: 0.9rem; color: var(--faded); min-width: 0 }
+
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--ground) }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--ground); border-bottom: 1px solid var(--rule); border-top: 1px solid var(--rule) }
+.bar .wrap { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding-block: 8px; }
+.tabs { display: flex; gap: 4px; margin-right: auto }
+.tabs button { font: 600 1.08rem var(--text); background: none; border: 0; color: var(--faded); padding: 6px 12px; border-radius: 3px; cursor: pointer; }
+.tabs button:hover { color: var(--ink) }
+.tabs button[aria-selected="true"] { color: var(--ground); background: var(--ink) }
+select, input[type=search] { font: 500 0.95rem var(--text); color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 3px; padding: 6px 9px; max-width: 100%; }
+input[type=search] { width: 15rem }
+button:focus-visible, select:focus-visible, input:focus-visible, tr:focus-visible, summary:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px }
+main { padding-block: 22px 64px }
+.pos { color: var(--buff) } .neg { color: var(--nerf) } .zero { color: var(--faded) }
+.num { font-variant-numeric: tabular-nums; font-weight: 600 }
+
+.face { border-radius: 50%; background: var(--hc, var(--rule)); object-fit: cover; flex: none }
+.face-32 { width: 34px; height: 34px } .face-22 { width: 22px; height: 22px }
+
+/* roster */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 430px); gap: 24px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr) } }
+.tablebox { overflow-x: auto; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 12px; text-align: right; white-space: nowrap; }
+td { border-top: 1px solid var(--rule) }
+th:first-child, td:first-child { text-align: left }
+th { font: 600 0.85rem var(--text); color: var(--faded); cursor: pointer; user-select: none; padding-block: 10px; }
+th:hover { color: var(--ink) }
+th[data-dir]::after { content: attr(data-dir); color: var(--brass); margin-left: 4px }
+tbody tr { cursor: pointer }
+tbody tr:hover { background: var(--brass-wash) }
+tbody tr.sel { background: var(--brass-wash); box-shadow: inset 3px 0 0 var(--brass) }
+.who { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.02rem }
+.net { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end }
+.netbar { width: 64px; height: 6px; position: relative; background: var(--rule); border-radius: 3px; overflow: hidden }
+.netbar i { position: absolute; top: 0; bottom: 0 }
+.netbar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--faded) }
+
+/* dossier */
+.dossier { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); max-height: calc(100vh - 84px); overflow: auto; }
+@media (max-width: 920px) { .dossier { position: static; max-height: none } }
+.dossier .head { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; padding: 16px; background: linear-gradient(115deg, color-mix(in srgb, var(--hc) 38%, transparent), transparent 70%); border-bottom: 1px solid var(--rule) }
+.portrait { width: 112px; aspect-ratio: 280 / 380; max-width: 100%; object-fit: cover; border-radius: 3px; background: color-mix(in srgb, var(--hc) 55%, var(--sheet)); }
+.dossier h2 { font: 400 1.9rem/1.05 var(--deco); margin: 4px 0 10px }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px }
+.stats div { display: grid }
+.stats span { font-size: 0.82rem; color: var(--faded) }
+.stats b { font-size: 1.45rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1 }
+.dossier .body { padding: 14px 16px 18px }
+.dossier h3 { font: 600 1rem var(--text); margin: 0 0 2px }
+.trend { width: 100%; height: 118px; display: block; margin: 4px 0 2px }
+.trend text { font: 500 11px var(--text); fill: var(--faded) }
+.hint { color: var(--faded); font-size: 0.86rem; margin: 6px 0 0 }
+.pgroup { margin-top: 18px }
+.pgroup header { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; border-bottom: 1px solid var(--rule); padding-bottom: 3px; margin-bottom: 4px }
+.pgroup header strong { font-weight: 600 }
+.pgroup header span { font-size: 0.88rem; color: var(--faded); white-space: nowrap }
+.chg { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 8px; padding: 4px 6px; border-radius: 3px; font-size: 0.95rem; align-items: start }
+.chg.b { background: var(--buff-wash) } .chg.n { background: var(--nerf-wash) }
+.tag { width: 24px; height: 22px; border-radius: 3px; border: 1px solid var(--rule); background: var(--sheet); color: var(--faded); cursor: pointer; padding: 0; font: 700 0.75rem var(--text) }
+.chg.b .tag { color: var(--buff); border-color: currentColor } .chg.n .tag { color: var(--nerf); border-color: currentColor }
+.blank { padding: 28px 18px; color: var(--faded) }
+.blank p { margin: 0 0 12px; max-width: 34ch }
+.quick { display: flex; flex-wrap: wrap; gap: 6px }
+.quick button { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50% }
+
+/* tier list */
+.tierhead { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin-bottom: 16px }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden }
+.seg button { font: 600 0.95rem var(--text); background: var(--sheet); color: var(--faded); border: 0; padding: 7px 14px; cursor: pointer }
+.seg button + button { border-left: 1px solid var(--rule) }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground) }
+.caption { color: var(--faded); font-size: 0.95rem }
+.tiers { display: grid; gap: 6px }
+.tier { display: grid; grid-template-columns: 76px minmax(0, 1fr); background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden }
+.tier .letter { display: grid; place-items: center; font: 400 2.6rem/1 var(--deco); color: #fff; background: var(--tc); text-shadow: 0 2px 0 #0003 }
+.tier .cards { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; min-height: 60px; align-content: start }
+.card { width: 84px; border: 0; padding: 0; background: none; color: var(--ink); cursor: pointer; text-align: left; font: inherit }
+.card img { width: 84px; aspect-ratio: 280 / 380; max-width: 100%; object-fit: cover; border-radius: 3px; background: color-mix(in srgb, var(--hc) 55%, var(--sheet)); }
+.card:hover img { outline: 2px solid var(--tc); outline-offset: 1px }
+.card b { display: block; font-size: 0.85rem; font-weight: 600; line-height: 1.15; margin-top: 4px; overflow-wrap: anywhere }
+.card small { display: block; font-size: 0.8rem; color: var(--faded); font-variant-numeric: tabular-nums }
+@media (max-width: 520px) { .tier { grid-template-columns: 48px minmax(0, 1fr) } .tier .letter { font-size: 1.8rem } .card, .card img { width: 64px } }
+.note { color: var(--faded); font-size: 0.92rem; margin-top: 14px; max-width: 75ch }
+
+/* patches */
+.patch { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; margin-bottom: 10px }
+.patch summary { cursor: pointer; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; list-style: none }
+.patch summary::-webkit-details-marker { display: none }
+.patch summary strong { font: 400 1.35rem var(--deco) }
+.patch summary span { color: var(--faded); font-size: 0.92rem }
+.faces { display: flex; margin-left: auto }
+.faces img { margin-left: -6px; border: 2px solid var(--sheet) }
+.patch .body { padding: 0 16px 16px; max-width: 900px }
+.patch h4 { font: 600 1.05rem var(--text); color: var(--brass); margin: 16px 0 4px }
+.ln { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 2px 0; align-items: start }
+.ln .mark { width: 22px; text-align: center; font-weight: 700 }
+.ln.h { grid-template-columns: 22px minmax(0, 1fr) }
+.patch a { color: var(--brass); font-weight: 600 }
+mark { background: color-mix(in srgb, var(--brass) 38%, transparent); color: inherit; border-radius: 2px }
+@media (prefers-reduced-motion: no-preference) { .dossier .head { animation: rise .25s ease-out } @keyframes rise { from { opacity: .4; transform: translateY(4px) } } }
+</style>
+
+<header class="wrap top">
+  <div>
+    <h1>Deadlock Patch Ledger</h1>
+    <p class="sub" id="sub">Loading patch notes…</p>
+  </div>
+  <label class="range" for="since">Count changes made since
+    <select id="since"></select></label>
+</header>
+
+<div class="bar"><div class="wrap">
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-heroes" data-view="heroes" aria-selected="true">Heroes</button>
+    <button role="tab" id="tab-tiers" data-view="tiers" aria-selected="false">Tier list</button>
+    <button role="tab" id="tab-patches" data-view="patches" aria-selected="false">Patch notes</button>
+  </div>
+  <select id="heroFilter" aria-label="Show one hero"><option value="">All heroes</option></select>
+  <input type="search" id="q" placeholder="Search notes, e.g. cooldown" aria-label="Search notes">
+</div></div>
+
+<main class="wrap">
+  <section id="view-heroes">
+    <div class="layout">
+      <div class="tablebox"><table id="heroTable"><thead><tr>
+        <th data-k="hero">Hero</th><th data-k="net">Net buffs</th><th data-k="buffs">Buffs</th><th data-k="nerfs">Nerfs</th>
+        <th data-k="neutral">Other</th><th data-k="wr">Win rate</th><th data-k="pr">Pick rate</th><th data-k="last">Last changed</th>
+      </tr></thead><tbody></tbody></table></div>
+      <aside class="dossier" id="detail"></aside>
+    </div>
+  </section>
+
+  <section id="view-tiers" hidden>
+    <div class="tierhead">
+      <div class="seg" role="group" aria-label="Rank heroes by">
+        <button id="mode-wr" data-mode="wr" aria-pressed="true">Win rate</button>
+        <button id="mode-net" data-mode="net" aria-pressed="false">Net buffs</button>
+        <button id="mode-combo" data-mode="combo" aria-pressed="false">Both</button>
+      </div>
+      <span class="caption" id="tierCaption"></span>
+    </div>
+    <div class="tiers" id="tiers"></div>
+    <p class="note" id="tierNote"></p>
+  </section>
+
+  <section id="view-patches" hidden><div id="patchList"></div></section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch {} } };
+let D, M = {}, overrides = store.get("overrides", {}), sortK = "net", sortDir = -1, selHero = null, tierMode = "wr";
+
+const fmtDate = d => new Date(d + "T00:00:00Z").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const hc = n => M[n]?.color || "#777";
+const face = (n, size = 32) => `<img class="face face-${size}" style="--hc:${hc(n)}" src="icons/${M[n]?.slug}-sm.webp" alt="" loading="lazy" width="${size}" height="${size}">`;
+const cardImg = (n, cls = "") => `<img class="${cls}" style="--hc:${hc(n)}" src="icons/${M[n]?.slug}-card.webp" alt="${esc(n)}" loading="lazy">`;
+const signed = v => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v);
+const cls = v => v > 0 ? "pos" : v < 0 ? "neg" : "zero";
+const lineKey = (p, i) => p.id + ":" + i;
+const scoreOf = (p, i, l) => (lineKey(p, i) in overrides ? overrides[lineKey(p, i)] : l.s);
+const patchesInRange = () => D.patches.filter(p => p.date >= $("#since").value);
+
+function computeHeroes() {
+  const rows = {}; for (const h of D.heroes) rows[h] = { hero: h, buffs: 0, nerfs: 0, neutral: 0, net: 0, last: "" };
+  for (const p of patchesInRange()) p.lines.forEach((l, i) => {
+    if (!l.hero || !rows[l.hero]) return;
+    const r = rows[l.hero], s = scoreOf(p, i, l);
+    if (s > 0) r.buffs++; else if (s < 0) r.nerfs++; else r.neutral++;
+    r.net += s; if (p.date > r.last) r.last = p.date;
+  });
+  const total = D.stats.reduce((a, s) => a + s.matches, 0);
+  for (const s of D.stats) if (rows[s.hero]) { rows[s.hero].wr = s.wins / s.matches; rows[s.hero].pr = s.matches / total * 12 }
+  return Object.values(rows);
+}
+
+function renderTable() {
+  const only = $("#heroFilter").value;
+  let rows = computeHeroes().filter(r => !only || r.hero === only);
+  const maxAbs = Math.max(1, ...rows.map(r => Math.abs(r.net)));
+  rows.sort((a, b) => { const x = a[sortK] ?? -1e9, y = b[sortK] ?? -1e9; return (typeof x === "string" ? x.localeCompare(y) : x - y) * sortDir });
+  document.querySelectorAll("#heroTable th").forEach(th => { if (th.dataset.k === sortK) th.dataset.dir = sortDir > 0 ? "▲" : "▼"; else delete th.dataset.dir });
+  $("#heroTable tbody").innerHTML = rows.map(r => {
+    const w = Math.abs(r.net) / maxAbs * 50;
+    return `<tr tabindex="0" data-hero="${esc(r.hero)}" class="${r.hero === selHero ? "sel" : ""}">
+      <td><span class="who">${face(r.hero)}${esc(r.hero)}</span></td>
+      <td><span class="net"><span class="num ${cls(r.net)}">${signed(r.net)}</span><span class="netbar"><i style="left:${r.net >= 0 ? 50 : 50 - w}%;width:${w}%;background:var(${r.net >= 0 ? "--buff" : "--nerf"})"></i></span></span></td>
+      <td class="num pos">${r.buffs}</td><td class="num neg">${r.nerfs}</td><td class="num zero">${r.neutral}</td>
+      <td class="num">${r.wr != null ? (r.wr * 100).toFixed(1) + "%" : "–"}</td>
+      <td class="num">${r.pr != null ? (r.pr * 100).toFixed(1) + "%" : "–"}</td>
+      <td class="zero">${r.last ? fmtDate(r.last) : "–"}</td></tr>`;
+  }).join("");
+}
+
+function trend(points) {
+  if (points.length < 2) return "";
+  const W = 400, H = 118, pl = 30, pr = 10, pt = 10, pb = 20;
+  const vals = points.map(p => p.v), lo = Math.min(0, ...vals), hi = Math.max(0, ...vals), span = hi - lo || 1;
+  const x = i => pl + i / (points.length - 1) * (W - pl - pr), y = v => pt + (hi - v) / span * (H - pt - pb);
+  const path = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join("");
+  const last = points.at(-1), col = last.v >= 0 ? "var(--buff)" : "var(--nerf)";
+  return `<svg class="trend" viewBox="0 0 ${W} ${H}" role="img" aria-label="Running buff score from ${points[0].d} to ${last.d}, ending at ${last.v}">
+    <line x1="${pl}" x2="${W - pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--rule)" stroke-width="1"/>
+    <path d="${path}L${x(points.length - 1)},${y(0)}L${x(0)},${y(0)}Z" fill="${col}" opacity=".14"/>
+    <path d="${path}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${x(points.length - 1)}" cy="${y(last.v)}" r="4" fill="${col}"/>
+    <text x="${pl - 6}" y="${y(hi) + 4}" text-anchor="end">${signed(hi)}</text>
+    ${lo < 0 ? `<text x="${pl - 6}" y="${y(lo) + 4}" text-anchor="end">${signed(lo)}</text>` : ""}
+    <text x="${pl - 6}" y="${y(0) + 4}" text-anchor="end">0</text>
+    <text x="${pl}" y="${H - 3}">${fmtDate(points[0].d)}</text>
+    <text x="${W - pr}" y="${H - 3}" text-anchor="end">${fmtDate(last.d)}</text></svg>`;
+}
+
+function hl(text, q) { const t = esc(text); if (!q) return t; const i = t.toLowerCase().indexOf(esc(q)); return i < 0 ? t : t.slice(0, i) + "<mark>" + t.slice(i, i + esc(q).length) + "</mark>" + t.slice(i + esc(q).length) }
+
+function renderDetail() {
+  const el = $("#detail");
+  if (!selHero) {
+    const top = computeHeroes().sort((a, b) => b.net - a.net);
+    el.innerHTML = `<div class="blank"><p>Pick a hero to see every change Valve made to them, patch by patch, and how their buffs add up over time.</p>
+      <p>Most buffed in this range:</p><div class="quick">${top.slice(0, 8).map(r => `<button data-hero="${esc(r.hero)}" title="${esc(r.hero)} ${signed(r.net)}">${face(r.hero)}</button>`).join("")}</div></div>`;
+    return;
+  }
+  const q = $("#q").value.trim().toLowerCase();
+  const groups = [], pts = []; let cum = 0, b = 0, n = 0;
+  for (const p of patchesInRange()) {
+    const items = []; let pnet = 0;
+    p.lines.forEach((l, i) => { if (l.hero !== selHero) return; const s = scoreOf(p, i, l); pnet += s; if (s > 0) b++; else if (s < 0) n++; if (!q || l.t.toLowerCase().includes(q)) items.push({ l, i, s }) });
+    if (pnet || items.length) { cum += pnet; pts.push({ d: p.date, v: cum }) }
+    if (items.length) groups.push({ p, items, pnet });
+  }
+  const st = computeHeroes().find(r => r.hero === selHero);
+  el.innerHTML = `<div class="head" style="--hc:${hc(selHero)}">${cardImg(selHero, "portrait")}
+      <div><h2>${esc(selHero)}</h2><div class="stats">
+        <div><span>Net buffs</span><b class="${cls(cum)}">${signed(cum)}</b></div>
+        <div><span>Win rate</span><b>${st?.wr != null ? (st.wr * 100).toFixed(1) + "%" : "–"}</b></div>
+        <div><span>Buffs</span><b class="pos">${b}</b></div>
+        <div><span>Nerfs</span><b class="neg">${n}</b></div></div></div></div>
+    <div class="body"><h3>Running buff score</h3>${trend(pts) || `<p class="hint">Only one patch touched ${esc(selHero)} in this range, so there's no trend yet.</p>`}
+    <p class="hint">Each change counts +1 for a buff and −1 for a nerf. Tags are detected automatically; click one to correct it.</p>
+    ${groups.reverse().map(g => `<div class="pgroup"><header><strong>${esc(g.p.title)}</strong><span>${fmtDate(g.p.date)}, <b class="${cls(g.pnet)}">${signed(g.pnet)}</b></span></header>
+      ${g.items.map(({ l, i, s }) => `<div class="chg ${s > 0 ? "b" : s < 0 ? "n" : ""}"><button class="tag" data-key="${lineKey(g.p, i)}" data-s="${s}" aria-label="Tagged ${s > 0 ? "buff" : s < 0 ? "nerf" : "neutral"}, click to change">${s > 0 ? "▲" : s < 0 ? "▼" : "•"}</button><span>${hl(l.t.replace(/^[^:]+:\s*/, ""), q)}</span></div>`).join("")}</div>`).join("") || `<p class="hint">No changes to ${esc(selHero)} match in this range.</p>`}</div>`;
+}
+
+const TIERS = [["S", "--tS"], ["A", "--tA"], ["B", "--tB"], ["C", "--tC"], ["D", "--tD"], ["F", "--tF"]];
+function renderTiers() {
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === tierMode));
+  let rows = computeHeroes();
+  if (tierMode !== "net") rows = rows.filter(r => r.wr != null);
+  const z = k => { const v = rows.map(r => r[k]), m = v.reduce((a, b) => a + b, 0) / v.length, sd = Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length) || 1; rows.forEach(r => r["z_" + k] = (r[k] - m) / sd) };
+  z("net"); if (tierMode !== "net") z("wr");
+  rows.forEach(r => r.score = tierMode === "wr" ? r.z_wr : tierMode === "net" ? r.z_net : r.z_wr * 0.7 + r.z_net * 0.3);
+  const cut = [1.25, 0.5, -0.1, -0.7, -1.3], buckets = TIERS.map(() => []);
+  rows.sort((a, b) => b.score - a.score).forEach(r => { const t = cut.findIndex(c => r.score >= c); buckets[t < 0 ? 5 : t].push(r) });
+  const val = r => tierMode === "net" ? `${signed(r.net)} net` : tierMode === "wr" ? `${(r.wr * 100).toFixed(1)}%` : `${(r.wr * 100).toFixed(1)}%, ${signed(r.net)}`;
+  $("#tiers").innerHTML = TIERS.map(([t, c], i) => `<div class="tier" style="--tc:var(${c})"><div class="letter">${t}</div><div class="cards">${buckets[i].map(r => `<button class="card" data-hero="${esc(r.hero)}">${cardImg(r.hero)}<b>${esc(r.hero)}</b><small>${val(r)}</small></button>`).join("") || `<span class="caption">Nobody here right now.</span>`}</div></div>`).join("");
+  $("#tierCaption").textContent = tierMode === "net" ? `Net buffs since ${fmtDate($("#since").value)}` : tierMode === "wr" ? `Win rate, all ranks, ${fmtDate(D.statsSince)} to ${fmtDate(D.generated)}` : "Weighted 70% win rate, 30% net buffs";
+  $("#tierNote").textContent = tierMode === "net"
+    ? "Tiers show how far each hero's net buff count sits from the average for the selected range. A high tier means Valve has been buffing them, not that they're strong."
+    : `Win rates come from ${D.stats.reduce((a, s) => a + s.matches, 0).toLocaleString()} hero picks across all ranks, via the community Deadlock API. Tiers are cut by distance from the average win rate. Click a hero to open their history.`;
+}
+
+function renderPatches() {
+  const only = $("#heroFilter").value, q = $("#q").value.trim().toLowerCase();
+  const list = [...D.patches].reverse().filter(p => p.date >= $("#since").value);
+  $("#patchList").innerHTML = list.map((p, idx) => {
+    const lines = (only || q) ? p.lines.filter(l => l.h || l.h2 || ((!only || l.hero === only) && (!q || (l.t || "").toLowerCase().includes(q)))) : p.lines;
+    const body = []; let head = null;
+    for (const l of lines) {
+      if (l.h || l.h2) { head = l; continue }
+      if (head) { body.push(`<h4>${esc(head.h || head.h2)}</h4>`); head = null }
+      const i = p.lines.indexOf(l), s = l.hero ? scoreOf(p, i, l) : null;
+      body.push(l.hero
+        ? `<div class="ln">${face(l.hero, 22)}<span class="${cls(s)}"><b class="mark">${s > 0 ? "▲" : s < 0 ? "▼" : ""}</b> ${hl(l.t, q)}</span></div>`
+        : `<div class="ln"><span></span><span>${hl(l.t, q)}</span></div>`);
+    }
+    if ((only || q) && !body.length) return "";
+    const touched = [...new Set(p.lines.filter(l => l.hero).map(l => l.hero))];
+    return `<details class="patch" ${idx === 0 || only || q ? "open" : ""}><summary><strong>${esc(p.title)}</strong><span>${fmtDate(p.date)}, ${touched.length ? `${touched.length} heroes changed` : "no hero changes"}</span>
+      <span class="faces">${touched.slice(0, 10).map(h => face(h, 22)).join("")}${touched.length > 10 ? `<span>&nbsp;+${touched.length - 10}</span>` : ""}</span></summary>
+      <div class="body">${body.join("")}<p><a href="${esc(p.url)}" target="_blank" rel="noopener">Read the original post on Steam</a></p></div></details>`;
+  }).join("") || `<p class="caption">No patch notes match. Try a different search or an earlier start date.</p>`;
+}
+
+const VIEWS = ["heroes", "tiers", "patches"];
+const view = () => VIEWS.find(k => !$("#view-" + k).hidden);
+function setView(v) {
+  for (const k of VIEWS) { $("#view-" + k).hidden = k !== v; $("#tab-" + k).setAttribute("aria-selected", k === v) }
+  if (location.hash.slice(1) !== v) history.replaceState(null, "", "#" + v);
+  renderAll();
+}
+function renderAll() { const v = view(); if (v === "heroes") { renderTable(); renderDetail() } else if (v === "tiers") renderTiers(); else renderPatches() }
+function pickHero(h) { selHero = h; if (view() !== "heroes") setView("heroes"); else renderAll(); if (innerWidth <= 920) $("#detail").scrollIntoView({ behavior: "smooth" }) }
+
+Promise.all([fetch("data.json").then(r => r.json()), fetch("heroes-meta.json").then(r => r.json()).catch(() => ({}))]).then(([data, meta]) => {
+  D = data; M = meta;
+  const changes = D.patches.reduce((a, p) => a + p.lines.filter(l => l.hero).length, 0);
+  $("#sub").textContent = `Every hero change from ${D.patches.length} official patches, ${fmtDate(D.patches[0].date)} to ${fmtDate(D.patches.at(-1).date)}. ${changes.toLocaleString()} changes, each marked as a buff or a nerf.`;
+  $("#since").innerHTML = [...D.patches].reverse().map(p => `<option value="${p.date}">${fmtDate(p.date)}, ${esc(p.title)}</option>`).join("");
+  $("#since").value = store.get("since", D.patches[0].date);
+  if (!$("#since").value) $("#since").value = D.patches[0].date;
+  $("#heroFilter").innerHTML += D.heroes.map(h => `<option>${esc(h)}</option>`).join("");
+  tierMode = store.get("tierMode", "wr");
+  setView(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "heroes");
+}).catch(() => { $("#sub").textContent = "The patch data didn't load. Reload the page to try again." });
+
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => setView(b.dataset.view));
+addEventListener("hashchange", () => { const h = location.hash.slice(1); if (VIEWS.includes(h)) setView(h) });
+$("#since").onchange = () => { store.set("since", $("#since").value); renderAll() };
+$("#heroFilter").onchange = () => { if ($("#heroFilter").value) selHero = $("#heroFilter").value; renderAll() };
+$("#q").oninput = renderAll;
+document.querySelectorAll("#heroTable th").forEach(th => th.onclick = () => { sortDir = sortK === th.dataset.k ? -sortDir : (th.dataset.k === "hero" ? 1 : -1); sortK = th.dataset.k; renderTable() });
+$("#heroTable tbody").addEventListener("click", e => { const tr = e.target.closest("tr"); if (tr) pickHero(tr.dataset.hero) });
+$("#heroTable tbody").addEventListener("keydown", e => { if (e.key === "Enter") { const tr = e.target.closest("tr"); if (tr) pickHero(tr.dataset.hero) } });
+$("#tiers").addEventListener("click", e => { const c = e.target.closest(".card"); if (c) pickHero(c.dataset.hero) });
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { tierMode = b.dataset.mode; store.set("tierMode", tierMode); renderTiers() });
+$("#detail").addEventListener("click", e => {
+  const q = e.target.closest(".quick button"); if (q) return pickHero(q.dataset.hero);
+  const t = e.target.closest(".tag"); if (!t) return;
+  overrides[t.dataset.key] = { "1": -1, "-1": 0, "0": 1 }[t.dataset.s]; store.set("overrides", overrides); renderAll();
+});
+</script>
