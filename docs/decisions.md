@@ -4,7 +4,22 @@ Why things are the way they are. Architecture decisions are presented to the own
 (options, trade-offs, recommendation) and recorded here once the owner has chosen.
 Newest first.
 
-## 2026-11-27: Host on GitHub Pages from a `gh-pages` branch
+## 2026-11-27: Deploy with GitHub Actions and refresh data daily
+
+- **Context:** The owner granted the `workflow` token scope so deploys and data refresh can run on
+  GitHub. Replaces the manual `gh-pages` branch deploy below.
+- **Options:**
+  1. Refresh in CI and deploy without committing: live data stays fresh, repo history stays small;
+     `site/data.json` in the repo goes stale and is only a fallback.
+  2. Refresh in CI and commit the new data: repo always matches the site; adds about 450 KB of
+     history per day because win rates change daily.
+- **Recommended:** option 1, daily at 06:17 UTC, falling back to committed data if an API fails.
+- **Chosen by the owner:** automatic deploys and a scheduled refresh (owner enabled the scope for
+  this); option 1 picked as the default.
+- **Consequences:** the live site can differ from the repo's `data.json`. Revisit if the owner
+  wants the data history in git, or a different schedule.
+
+## 2026-11-27: Host on GitHub Pages from a `gh-pages` branch (superseded)
 
 - **Context:** The site needs a public address so search engines can index it. The first preview
   was a private claude.ai artifact, which search engines are unlikely to index.

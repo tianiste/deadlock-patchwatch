@@ -28,7 +28,11 @@ python -m http.server 8765 -d site
 
 Then open http://localhost:8765.
 
-## Refresh the data
+## Deploying and data refresh
+
+The GitHub Actions workflow in `.github/workflows/pages.yml` publishes `site/` to GitHub Pages on every push to `main` that touches the site or `build_data.py`, and once a day at 06:17 UTC. Each run fetches fresh patch notes and win rates first, so the live site stays current without commits. If a fetch fails, it deploys the data already in the repo. It can also be started by hand from the Actions tab.
+
+## Refresh the data locally
 
 ```
 python build_data.py

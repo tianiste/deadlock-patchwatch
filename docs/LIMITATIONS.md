@@ -9,7 +9,7 @@ limitation when it is found; remove it when it is fixed.
 | Buff/nerf tags are guessed from wording | Some lines are tagged wrong or neutral, especially "changed from X to Y" upgrade swaps | Heuristic rules in `classify()` | 2026-11-27 |
 | Every change counts as one point | A 1% tweak and a full rework weigh the same in net buffs | No model of each stat's value | 2026-11-27 |
 | Tag corrections are saved only in the viewer's browser | Fixes made on the page don't reach other people or the repo | Static site, no backend | 2026-11-27 |
-| Data is a manual snapshot | New patches and win rates appear only after someone runs `build_data.py` and deploys | No scheduled job; Actions needs the `workflow` token scope | 2026-11-27 |
+| Data refreshes once a day | A patch can take up to a day to appear on the site | Daily schedule in the Pages workflow | 2026-11-27 |
 | Win rates are all ranks over 14 days | No rank filter; tiers shift as the snapshot ages | Kept simple; fetched once per build | 2026-11-27 |
 | Item, map and general changes are not scored | Global changes (for example "all heroes +5% bullet growth") don't affect any hero's score | Only lines naming a hero are scored | 2026-11-27 |
 | The claude.ai preview copy is not kept in sync | That link shows an older version | GitHub Pages is now the real site | 2026-11-27 |
