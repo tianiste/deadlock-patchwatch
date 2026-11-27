@@ -92,6 +92,16 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 /* sticky bar: cyan marks where you are */
 .bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--ground); border-block: 1px dashed var(--rule); margin-top: 8px }
 .bar .wrap { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding-block: 8px }
+.rankpick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; width: 100%; font-size: .88rem; color: var(--faded) }
+.rk-list { display: flex; flex-wrap: wrap; gap: 4px }
+.rk, .rk-all { background: var(--sheet); border: 1.5px solid var(--rule); cursor: pointer; padding: 3px 5px; line-height: 0 }
+.rk img { width: 38px; height: 30px; object-fit: contain; filter: grayscale(.55) opacity(.8) }
+.rk:hover img { filter: none }
+.rk[aria-pressed="true"] { border-color: var(--rc); background: color-mix(in srgb, var(--rc) 22%, var(--sheet)) }
+.rk[aria-pressed="true"] img { filter: none }
+.rk-all { font: 500 .85rem var(--text); color: var(--faded); line-height: 1.2; padding: 6px 10px; align-self: stretch }
+.rk-all[aria-pressed="true"] { border-color: var(--cyan); color: var(--ink); background: var(--cyan-wash) }
+.rankrow { padding-block: 14px 6px }
 .tabs { display: flex; gap: 6px; margin-right: auto }
 .tabs button { font: 400 1.15rem var(--display); letter-spacing: .01em; background: none; border: 0; color: var(--faded); padding: 6px 10px 4px; cursor: pointer; border-bottom: 3px solid transparent }
 .tabs button:hover { color: var(--ink) }
@@ -228,13 +238,20 @@ mark { background: var(--hl); color: #100e0e; padding: 0 2px }
   </div>
 </header>
 
+<div class="wrap rankrow">
+  <div class="rankpick" role="group" aria-labelledby="rankLabel">
+    <span id="rankLabel">Win rates from</span>
+    <button class="rk-all" id="rankAll" aria-pressed="true">All ranks</button>
+    <span id="rankBtns" class="rk-list"></span>
+  </div>
+</div>
+
 <div class="bar"><div class="wrap">
   <div class="tabs" role="tablist">
     <button role="tab" id="tab-heroes" data-view="heroes" aria-selected="true">Heroes</button>
     <button role="tab" id="tab-tiers" data-view="tiers" aria-selected="false">Tier list</button>
     <button role="tab" id="tab-patches" data-view="patches" aria-selected="false">Patch notes</button>
   </div>
-  <select id="rank" aria-label="Win rates from"><option value="all">Win rates: all ranks</option><option value="archon">Win rates: Archon and up</option><option value="phantom">Win rates: Phantom and up</option></select>
   <select id="heroFilter" aria-label="Show one hero"><option value="">All heroes</option></select>
   <input type="search" id="q" placeholder="Search notes, e.g. cooldown" aria-label="Search notes">
 </div></div>
@@ -244,7 +261,7 @@ mark { background: var(--hl); color: #100e0e; padding: 0 2px }
     <div class="layout">
       <div class="tablebox"><table id="heroTable"><thead><tr>
         <th data-k="hero">Hero</th><th data-k="net">Net buffs</th><th data-k="buffs">Buffs</th><th data-k="nerfs">Nerfs</th>
-        <th data-k="neutral">Other</th><th data-k="wr">Win rate</th><th data-k="pr">Pick rate</th><th data-k="last">Last changed</th>
+        <th data-k="neutral">Other</th><th data-k="wr" id="wrHead">Win rate</th><th data-k="pr">Pick rate</th><th data-k="last">Last changed</th>
       </tr></thead><tbody></tbody></table></div>
       <aside class="dossier" id="detail"></aside>
     </div>
@@ -288,8 +305,28 @@ const scoreOf = (p, i, l) => (lineKey(p, i) in overrides ? overrides[lineKey(p, 
 const patchesInRange = () => D.patches.filter(p => p.date >= $("#since").value);
 
 const SHRINK_K = 1000;
-const RANK_NAMES = { all: "all ranks", archon: "Archon and up", phantom: "Phantom and up" };
-const rankStats = () => (D.statsByRank && D.statsByRank[$("#rank").value]) || D.stats;
+let selTiers = new Set();
+function rankStats() {
+  if (!selTiers.size || !D.statsByTier) return D.stats;
+  const sum = {};
+  for (const t of selTiers) for (const r of D.statsByTier[t] || []) {
+    const o = sum[r.hero] || (sum[r.hero] = { hero: r.hero, wins: 0, matches: 0 });
+    o.wins += r.wins; o.matches += r.matches;
+  }
+  return Object.values(sum).filter(r => r.matches > 0);
+}
+function rankLabel() {
+  if (!selTiers.size) return "all ranks";
+  const ts = [...selTiers].map(Number).sort((a, b) => a - b), name = t => D.ranks.find(r => r.tier === t).name;
+  const contiguous = ts.every((t, i) => !i || t === ts[i - 1] + 1);
+  if (ts.length === 1) return name(ts[0]);
+  if (contiguous) return `${name(ts[0])} to ${name(ts.at(-1))}`;
+  return ts.map(name).join(", ");
+}
+function renderRanks() {
+  $("#rankAll").setAttribute("aria-pressed", !selTiers.size);
+  $("#rankBtns").innerHTML = D.ranks.map(r => `<button class="rk" data-tier="${r.tier}" aria-pressed="${selTiers.has(String(r.tier))}" title="${esc(r.name)}" style="--rc:${r.color || "#888"}"><img src="ranks/rank${r.tier}.webp" alt="${esc(r.name)}" width="38" height="30"></button>`).join("");
+}
 function wrShift(pid, hero) {
   const w = D.wrByPatch && D.wrByPatch[pid] && D.wrByPatch[pid].heroes[hero];
   if (!w || w[1] < 300 || w[3] < 300) return null;
@@ -318,6 +355,7 @@ function computeHeroes() {
 }
 
 function renderTable() {
+  $("#wrHead").textContent = selTiers.size ? `Win rate (${rankLabel()})` : "Win rate";
   const only = $("#heroFilter").value;
   let rows = computeHeroes().filter(r => !only || r.hero === only);
   const maxAbs = Math.max(1, ...rows.map(r => Math.abs(r.net)));
@@ -397,10 +435,10 @@ function renderTiers() {
   rows.sort((a, b) => b.score - a.score).forEach(r => { const t = cut.findIndex(c => r.score >= c); buckets[t < 0 ? 5 : t].push(r) });
   const val = r => tierMode === "net" ? `${signed(r.net)} net` : tierMode === "wr" ? `${(r.wr * 100).toFixed(1)}% win, ${(r.pr * 100).toFixed(1)}% pick` : `${(r.wr * 100).toFixed(1)}%, ${signed(r.net)}`;
   $("#tiers").innerHTML = TIERS.map(([t, c, tt], i) => `<div class="tier" style="--tc:var(${c});--tt:${tt}"><div class="letter">${t}</div><div class="cards">${buckets[i].map(r => `<button class="card" data-hero="${esc(r.hero)}">${cardImg(r.hero)}<b>${esc(r.hero)}</b><small>${val(r)}</small></button>`).join("") || `<span class="caption">Nobody here right now.</span>`}</div></div>`).join("");
-  $("#tierCaption").textContent = tierMode === "net" ? `Net buffs since ${fmtDate($("#since").value)}` : tierMode === "wr" ? `Win rate, ${RANK_NAMES[$("#rank").value]}, ${fmtDate(D.statsSince)} to ${fmtDate(D.generated)}` : "Weighted 70% win rate, 30% net buffs";
+  $("#tierCaption").textContent = tierMode === "net" ? `Net buffs since ${fmtDate($("#since").value)}` : tierMode === "wr" ? `Win rate, ${rankLabel()}, ${fmtDate(D.statsSince)} to ${fmtDate(D.generated)}` : "Weighted 70% win rate, 30% net buffs";
   $("#tierNote").textContent = tierMode === "net"
     ? "Tiers show how far each hero's net buff count sits from the average for the selected range. A high tier means Valve has been buffing them, not that they're strong."
-    : `Win rates come from ${rankStats().reduce((a, s) => a + s.matches, 0).toLocaleString()} hero picks (${RANK_NAMES[$("#rank").value]}) via the community Deadlock API. Heroes with few matches are pulled toward the average so a lucky week can't put them in S or F. Tiers are cut by distance from the average. Click a hero to open their history.`;
+    : `Win rates come from ${rankStats().reduce((a, s) => a + s.matches, 0).toLocaleString()} hero picks (${rankLabel()}) via the community Deadlock API. Heroes with few matches are pulled toward the average so a lucky week can't put them in S or F. Tiers are cut by distance from the average. Click a hero to open their history.`;
 }
 
 function renderPatches() {
@@ -450,14 +488,20 @@ Promise.all([fetch("data.json").then(r => r.json()), fetch("heroes-meta.json").t
   if (!$("#since").value) $("#since").value = D.patches[0].date;
   $("#heroFilter").innerHTML += D.heroes.map(h => `<option>${esc(h)}</option>`).join("");
   tierMode = store.get("tierMode", "wr");
-  $("#rank").value = store.get("rank", "all"); if (!$("#rank").value) $("#rank").value = "all";
+  selTiers = new Set((store.get("tiers", []) || []).filter(t => D.statsByTier && D.statsByTier[t]));
+  renderRanks();
   setView(VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "heroes");
 }).catch(() => { $("#sub").textContent = "The patch data didn't load. Reload the page to try again." });
 
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => setView(b.dataset.view));
 addEventListener("hashchange", () => { const h = location.hash.slice(1); if (VIEWS.includes(h)) setView(h) });
 $("#since").onchange = () => { store.set("since", $("#since").value); renderAll() };
-$("#rank").onchange = () => { store.set("rank", $("#rank").value); renderAll() };
+$("#rankBtns").addEventListener("click", e => {
+  const b = e.target.closest(".rk"); if (!b) return;
+  const t = b.dataset.tier; selTiers.has(t) ? selTiers.delete(t) : selTiers.add(t);
+  store.set("tiers", [...selTiers]); renderRanks(); renderAll();
+});
+$("#rankAll").onclick = () => { selTiers.clear(); store.set("tiers", []); renderRanks(); renderAll() };
 $("#heroFilter").onchange = () => { if ($("#heroFilter").value) selHero = $("#heroFilter").value; renderAll() };
 $("#q").oninput = renderAll;
 document.querySelectorAll("#heroTable th").forEach(th => th.onclick = () => { sortDir = sortK === th.dataset.k ? -sortDir : (th.dataset.k === "hero" ? 1 : -1); sortK = th.dataset.k; renderTable() });

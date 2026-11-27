@@ -20,12 +20,16 @@ NOW = int(time.time())
 since = NOW - 14 * 86400
 STATS_URL = "https://api.deadlock-api.com/v1/analytics/hero-stats"
 stats = get(f"{STATS_URL}?min_unix_timestamp={since}", "data/herostats.json")
-# Rank groups for the tier list. average_badge = rank tier * 10 + subrank (Archon = 7x, Phantom = 9x).
-RANKS = {"all": 0, "archon": 71, "phantom": 91}
-stats_by_rank = {"all": stats}
-for key, badge in RANKS.items():
-    if badge:
-        stats_by_rank[key] = get(f"{STATS_URL}?min_unix_timestamp={since}&min_average_badge={badge}", f"data/herostats_{key}.json")
+# Win rates per major rank (by the match's average badge; badge = rank tier * 10 + subrank 1-6).
+# Tiers 1-11 are Initiate ... Eternus; 0 (Obscurus, unranked) is left out.
+ranks = [r for r in get("https://api.deadlock-api.com/v1/assets/ranks", "data/ranks.json") if r["tier"] >= 1]
+stats_by_tier = {}
+for r in ranks:
+    t = r["tier"]
+    stats_by_tier[str(t)] = get(f"{STATS_URL}?min_unix_timestamp={since}&min_average_badge={t * 10}&max_average_badge={t * 10 + 9}",
+                                f"data/herostats_tier{t}.json")
+    if FETCH:
+        time.sleep(0.1)
 
 heroes = [h for h in heroes if h.get("player_selectable") and not h.get("disabled")]
 by_id = {h["id"]: h for h in heroes}
@@ -283,7 +287,8 @@ out = {
     "heroes": sorted(h["name"] for h in heroes),
     "patches": patches,
     "stats": stat_rows,
-    "statsByRank": {k: stat_rows_of(v, 100) for k, v in stats_by_rank.items()},
+    "ranks": [{"tier": r["tier"], "name": r["name"], "color": r.get("color")} for r in ranks],
+    "statsByTier": {t: stat_rows_of(v, 1) for t, v in stats_by_tier.items()},
     "wrByPatch": wr_by_patch,
 }
 import os
@@ -307,3 +312,21 @@ for h in heroes:
     meta[h["name"]] = {"slug": slug, "color": (h.get("colors") or {}).get("style_hex")}
 json.dump(meta, open("site/heroes-meta.json", "w"), indent=0)
 print(f"icons ready for {len(meta)} heroes")
+
+# ---------- rank icons (site/ranks), shrunk to 64px high when Pillow is available ----------
+os.makedirs("site/ranks", exist_ok=True)
+for r in ranks:
+    path = f"site/ranks/rank{r['tier']}.webp"
+    url = (r.get("images") or {}).get("large_webp")
+    if url and not os.path.exists(path):
+        req = urllib.request.Request(url, headers={"User-Agent": "patchnotes-site/1.0"})
+        raw = urllib.request.urlopen(req, timeout=60).read()
+        try:
+            from PIL import Image
+            import io
+            im = Image.open(io.BytesIO(raw))
+            im.thumbnail((128, 64))
+            im.save(path, "WEBP", quality=88)
+        except ImportError:
+            open(path, "wb").write(raw)
+print(f"rank icons ready for {len(ranks)} ranks")

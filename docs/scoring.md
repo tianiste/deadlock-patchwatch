@@ -107,9 +107,11 @@ lines have none.
 
 - **Net buffs** = buffs − nerfs over the patches on or after the "Count changes made since" date.
 - **Running buff score** = the cumulative net per patch that touched the hero.
-- **Win rate** = wins / matches over the last 14 days from `api.deadlock-api.com/v1/analytics/hero-stats`,
-  for the chosen rank group: all ranks, Archon and up (`min_average_badge=71`) or Phantom and up
-  (`min_average_badge=91`). Shown steadied: (wins + 1,000 × average) / (matches + 1,000), so a
+- **Win rate** = wins / matches over the last 14 days from `api.deadlock-api.com/v1/analytics/hero-stats`.
+  With no rank picked it uses all matches (including unranked ones). Picking one or more of the
+  11 major ranks (Initiate ... Eternus, from `/v1/assets/ranks`) adds up those ranks' matches,
+  fetched per rank with `min_average_badge=tier*10` and `max_average_badge=tier*10+9` (the match's
+  average rank; badge = tier × 10 + subrank). Shown steadied: (wins + 1,000 × average) / (matches + 1,000), so a
   hero with few matches is pulled toward the average. The table's tooltip shows the raw rate and
   match count.
 - **Pick rate** = hero matches / all hero matches × 12 (12 heroes per match).
