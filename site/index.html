@@ -12,155 +12,216 @@
 <meta property="og:description" content="See how much each Deadlock hero has been buffed or nerfed across every patch, plus a win-rate tier list.">
 <meta property="og:url" content="https://tianiste.github.io/deadlock-patchwatch/">
 <meta name="twitter:card" content="summary">
-<meta name="theme-color" content="#13201d">
+<meta name="theme-color" content="#100e0e">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Limelight&family=Barlow+Semi+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Jost:wght@400;500;600;700&display=swap">
 <style>
 /* Reset (matches what the artifact host adds) */
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px) }
 body { margin: 0 } img { max-width: 100% } [hidden] { display: none !important }
-/* Layout: a precinct ledger. Title and range on one line, tabs below; roster table with portraits on the left,
-   a hero dossier on the right (stacks on phones). Tier list is a wall of portrait cards. Left-aligned throughout. */
+
+/* Deadlock city-guide look, after Valve's "City Never Sleeps" page: ink ground with grain, cream type,
+   postcard-framed portraits, cyan route markers for navigation, dashed HUD callouts for numbers.
+   Layout: masthead strip, postcard title + portrait strip, sticky tab bar, then the three views. */
 :root {
-  --ground: #e4ebe6; --sheet: #f2f5f1; --ink: #16241f; --faded: #5b6b64; --rule: #c6d3cb;
-  --brass: #8a6420; --buff: #12775b; --nerf: #ad3727;
-  --buff-wash: #12775b17; --nerf-wash: #ad372714; --brass-wash: #8a642020;
-  --deco: "Limelight", "Didot", Georgia, serif;
-  --text: "Barlow Semi Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
-  --tS: #b8372b; --tA: #c9721c; --tB: #b8952a; --tC: #4f8c63; --tD: #3f7593; --tF: #6e5b86;
+  --ground: #f7e9d5; --sheet: #fdf5e8; --ink: #100e0e; --faded: #6b5c4c; --rule: #e0ccb0;
+  --frame: #fffaf1; --mast: #100e0e; --mast-ink: #f7e9d5;
+  --cyan: #1b7d91; --buff: #3b7c25; --nerf: #c2471f; --hl: #ffe14d; --sticker: #e3633c;
+  --buff-wash: #3b7c251a; --nerf-wash: #c2471f17; --cyan-wash: #1b7d911c;
+  --title-shadow: #e3633c;
+  --grain-opacity: .05;
+  --display: "Lilita One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  --text: "Jost", "Futura", "Century Gothic", "Segoe UI", system-ui, sans-serif;
+  --tS: #e3633c; --tA: #ffe14d; --tB: #97da79; --tC: #60cde3; --tD: #b9a68c; --tF: #8c7b8f;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --ground: #13201d; --sheet: #1a2a26; --ink: #ebe4cf; --faded: #93a39b; --rule: #2b3d38;
-  --brass: #d1ad62; --buff: #6fdcbc; --nerf: #f0735f;
-  --buff-wash: #6fdcbc17; --nerf-wash: #f0735f17; --brass-wash: #d1ad6224; color-scheme: dark } }
+  --ground: #100e0e; --sheet: #1a1716; --ink: #f7e9d5; --faded: #b3a38f; --rule: #f7e9d522;
+  --frame: #f7e9d5; --mast: #000; --mast-ink: #f7e9d5;
+  --cyan: #60cde3; --buff: #97da79; --nerf: #e3633c; --hl: #ffe14d;
+  --buff-wash: #97da7914; --nerf-wash: #e3633c17; --cyan-wash: #60cde31c;
+  --title-shadow: #e3633c; --grain-opacity: .09; color-scheme: dark } }
 :root[data-theme="dark"] {
-  --ground: #13201d; --sheet: #1a2a26; --ink: #ebe4cf; --faded: #93a39b; --rule: #2b3d38;
-  --brass: #d1ad62; --buff: #6fdcbc; --nerf: #f0735f;
-  --buff-wash: #6fdcbc17; --nerf-wash: #f0735f17; --brass-wash: #d1ad6224; color-scheme: dark }
+  --ground: #100e0e; --sheet: #1a1716; --ink: #f7e9d5; --faded: #b3a38f; --rule: #f7e9d522;
+  --frame: #f7e9d5; --mast: #000; --mast-ink: #f7e9d5;
+  --cyan: #60cde3; --buff: #97da79; --nerf: #e3633c; --hl: #ffe14d;
+  --buff-wash: #97da7914; --nerf-wash: #e3633c17; --cyan-wash: #60cde31c;
+  --title-shadow: #e3633c; --grain-opacity: .09; color-scheme: dark }
 
 * { box-sizing: border-box }
-body { background: var(--ground); color: var(--ink); font: 400 16px/1.45 var(--text); }
-.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body { background: var(--ground); color: var(--ink); font: 400 17px/1.55 var(--text); position: relative }
+/* static film grain over everything, like the printed-guide texture */
+body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.wrap { max-width: 1280px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 img { display: block }
+a { color: var(--cyan) }
 
-header.top { padding-block: 30px 14px; display: flex; flex-wrap: wrap; gap: 14px 32px; align-items: end; justify-content: space-between; }
-h1 { font: 400 clamp(2rem, 5.4vw, 3.3rem)/1 var(--deco); margin: 0; letter-spacing: 0.01em; }
-.sub { color: var(--faded); margin: 8px 0 0; max-width: 60ch; font-size: 0.98rem }
-.range { display: grid; gap: 4px; font-size: 0.9rem; color: var(--faded); min-width: 0 }
+/* masthead: compact black strip with brand and the fan note */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--mast) }
+.mast { background: var(--mast); color: var(--mast-ink); margin-top: calc(-1 * env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px) }
+.mast .wrap { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: center; justify-content: space-between; min-height: 52px; padding-block: 8px }
+.mast .brand { font: 400 1.15rem var(--display); letter-spacing: .01em }
+.mast small { font-size: .82rem; opacity: .7; max-width: 46ch; line-height: 1.35 }
 
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--ground) }
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--ground); border-bottom: 1px solid var(--rule); border-top: 1px solid var(--rule) }
-.bar .wrap { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding-block: 8px; }
-.tabs { display: flex; gap: 4px; margin-right: auto }
-.tabs button { font: 600 1.08rem var(--text); background: none; border: 0; color: var(--faded); padding: 6px 12px; border-radius: 3px; cursor: pointer; }
+/* postcard title + portrait strip */
+.hero { padding-block: 34px 0; overflow: hidden }
+.hero > .wrap:first-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 330px); gap: 18px 40px; align-items: end }
+@media (max-width: 860px) { .hero > .wrap:first-child { grid-template-columns: minmax(0, 1fr) } }
+.title { position: relative; margin: 0; font: 400 clamp(3rem, 10vw, 7.4rem)/.86 var(--display); color: var(--frame);
+  -webkit-text-stroke: .022em var(--ink); paint-order: stroke fill;
+  text-shadow: .025em .025em 0 var(--ink), .05em .05em 0 var(--title-shadow), .062em .062em 0 var(--ink); text-wrap: balance }
+.title .small { display: block; font-size: .38em; line-height: 1; margin-bottom: .12em; -webkit-text-stroke-width: .03em }
+.sticker { display: inline-block; background: var(--sticker); color: #fff7ea; font: 400 clamp(.95rem, 1.6vw, 1.2rem)/1 var(--display); padding: 8px 14px 7px; transform: rotate(-4deg); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); margin: 14px 0 0 6px }
+.intro { margin: 0; color: var(--faded); max-width: 40ch; font-size: 1rem }
+.intro b { color: var(--ink); font-weight: 600 }
+.range { display: grid; gap: 4px; font-size: .9rem; color: var(--faded); margin-top: 14px }
+
+.strip-wrap { margin-top: 26px; position: relative }
+.strip-cap { font-size: .9rem; color: var(--faded); margin: 0 0 8px }
+.strip { display: flex; gap: 14px; overflow-x: auto; padding: 8px 4px 22px; scrollbar-width: thin }
+.post { flex: none; width: 128px; border: 0; padding: 6px 6px 8px; background: var(--frame); color: #100e0e; cursor: pointer; text-align: left; font: inherit;
+  box-shadow: 0 10px 22px -12px #000c; transform: rotate(var(--tilt, 0deg)); position: relative }
+.post:nth-child(odd) { --tilt: -2deg } .post:nth-child(even) { --tilt: 1.6deg } .post:nth-child(3n) { --tilt: -.8deg }
+.post img { width: 100%; aspect-ratio: 280 / 380; object-fit: cover; background: var(--hc) }
+.post b { display: block; font: 400 1rem/1.05 var(--display); margin-top: 6px }
+.post .score { position: absolute; top: -8px; right: -8px; background: #97da79; color: #100e0e; font: 400 .95rem/1 var(--display); padding: 5px 7px 4px; border: 2px solid #100e0e; transform: rotate(6deg) }
+@media (prefers-reduced-motion: no-preference) { .post, .card img { transition: transform .15s ease-out } .post:hover, .post:focus-visible { transform: rotate(0) translateY(-4px) } }
+
+/* sticky bar: cyan marks where you are */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--ground); border-block: 1px dashed var(--rule); margin-top: 8px }
+.bar .wrap { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding-block: 8px }
+.tabs { display: flex; gap: 6px; margin-right: auto }
+.tabs button { font: 400 1.15rem var(--display); letter-spacing: .01em; background: none; border: 0; color: var(--faded); padding: 6px 10px 4px; cursor: pointer; border-bottom: 3px solid transparent }
 .tabs button:hover { color: var(--ink) }
-.tabs button[aria-selected="true"] { color: var(--ground); background: var(--ink) }
-select, input[type=search] { font: 500 0.95rem var(--text); color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 3px; padding: 6px 9px; max-width: 100%; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-color: var(--cyan) }
+select, input[type=search] { font: 500 .95rem var(--text); color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 2px; padding: 6px 9px; max-width: 100% }
 input[type=search] { width: 15rem }
-button:focus-visible, select:focus-visible, input:focus-visible, tr:focus-visible, summary:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px }
-main { padding-block: 22px 64px }
+button:focus-visible, select:focus-visible, input:focus-visible, tr:focus-visible, summary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px }
+main { padding-block: 24px 56px }
 .pos { color: var(--buff) } .neg { color: var(--nerf) } .zero { color: var(--faded) }
 .num { font-variant-numeric: tabular-nums; font-weight: 600 }
 
-.face { border-radius: 50%; background: var(--hc, var(--rule)); object-fit: cover; flex: none }
+.face { border-radius: 50%; background: var(--hc, var(--rule)); object-fit: cover; flex: none; box-shadow: 0 0 0 2px var(--frame) }
 .face-32 { width: 34px; height: 34px } .face-22 { width: 22px; height: 22px }
 
 /* roster */
-.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 430px); gap: 24px; align-items: start; }
-@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr) } }
-.tablebox { overflow-x: auto; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px }
-table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-th, td { padding: 6px 12px; text-align: right; white-space: nowrap; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 28px; align-items: start }
+@media (max-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr) } }
+.tablebox { overflow-x: auto; background: var(--sheet); border: 1px solid var(--rule) }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums }
+th, td { padding: 7px 12px; text-align: right; white-space: nowrap }
 td { border-top: 1px solid var(--rule) }
 th:first-child, td:first-child { text-align: left }
-th { font: 600 0.85rem var(--text); color: var(--faded); cursor: pointer; user-select: none; padding-block: 10px; }
+th { font: 500 .86rem var(--text); color: var(--faded); cursor: pointer; user-select: none; padding-block: 11px }
 th:hover { color: var(--ink) }
-th[data-dir]::after { content: attr(data-dir); color: var(--brass); margin-left: 4px }
+th[data-dir]::after { content: attr(data-dir); color: var(--cyan); margin-left: 4px }
 tbody tr { cursor: pointer }
-tbody tr:hover { background: var(--brass-wash) }
-tbody tr.sel { background: var(--brass-wash); box-shadow: inset 3px 0 0 var(--brass) }
-.who { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.02rem }
+tbody tr:hover { background: var(--cyan-wash) }
+tbody tr.sel { background: var(--cyan-wash); box-shadow: inset 4px 0 0 var(--cyan) }
+.who { display: flex; align-items: center; gap: 11px; font: 400 1.08rem var(--display); letter-spacing: .01em }
 .net { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end }
-.netbar { width: 64px; height: 6px; position: relative; background: var(--rule); border-radius: 3px; overflow: hidden }
+.netbar { width: 64px; height: 6px; position: relative; background: var(--rule); overflow: hidden }
 .netbar i { position: absolute; top: 0; bottom: 0 }
 .netbar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--faded) }
 
-/* dossier */
-.dossier { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); max-height: calc(100vh - 84px); overflow: auto; }
-@media (max-width: 920px) { .dossier { position: static; max-height: none } }
-.dossier .head { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; padding: 16px; background: linear-gradient(115deg, color-mix(in srgb, var(--hc) 38%, transparent), transparent 70%); border-bottom: 1px solid var(--rule) }
-.portrait { width: 112px; aspect-ratio: 280 / 380; max-width: 100%; object-fit: cover; border-radius: 3px; background: color-mix(in srgb, var(--hc) 55%, var(--sheet)); }
-.dossier h2 { font: 400 1.9rem/1.05 var(--deco); margin: 4px 0 10px }
-.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px }
-.stats div { display: grid }
-.stats span { font-size: 0.82rem; color: var(--faded) }
-.stats b { font-size: 1.45rem; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1 }
-.dossier .body { padding: 14px 16px 18px }
-.dossier h3 { font: 600 1rem var(--text); margin: 0 0 2px }
+/* hero panel: postcard portrait + dashed HUD callouts */
+.dossier { background: var(--sheet); border: 1px solid var(--rule); position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); max-height: calc(100vh - 84px); overflow: auto }
+@media (max-width: 960px) { .dossier { position: static; max-height: none } }
+.dossier .head { display: grid; grid-template-columns: 122px minmax(0, 1fr); gap: 18px; padding: 20px 18px 18px; background: radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--hc) 45%, transparent), transparent 70%); border-bottom: 1px dashed var(--rule) }
+.frame { display: block; background: var(--frame); padding: 5px 5px 7px; transform: rotate(-2.5deg); box-shadow: 0 10px 20px -12px #000c; align-self: start }
+.portrait { width: 100%; aspect-ratio: 280 / 380; object-fit: cover; background: var(--hc) }
+.dossier h2 { font: 400 2.2rem/1 var(--display); margin: 2px 0 12px; letter-spacing: .01em }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
+.stats div { display: grid; border: 1.5px dashed var(--rule); padding: 5px 9px 4px }
+.stats span { font-size: .8rem; color: var(--faded) }
+.stats b { font: 400 1.5rem/1.1 var(--display); font-variant-numeric: tabular-nums }
+.dossier .body { padding: 16px 18px 20px }
+.dossier h3 { font: 400 1.1rem var(--display); margin: 0 0 2px; letter-spacing: .01em }
 .trend { width: 100%; height: 118px; display: block; margin: 4px 0 2px }
 .trend text { font: 500 11px var(--text); fill: var(--faded) }
-.hint { color: var(--faded); font-size: 0.86rem; margin: 6px 0 0 }
-.pgroup { margin-top: 18px }
-.pgroup header { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; border-bottom: 1px solid var(--rule); padding-bottom: 3px; margin-bottom: 4px }
-.pgroup header strong { font-weight: 600 }
-.pgroup header span { font-size: 0.88rem; color: var(--faded); white-space: nowrap }
-.chg { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 8px; padding: 4px 6px; border-radius: 3px; font-size: 0.95rem; align-items: start }
+.hint { color: var(--faded); font-size: .88rem; margin: 6px 0 0 }
+.pgroup { margin-top: 20px }
+.pgroup header { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; border-bottom: 1px dashed var(--rule); padding-bottom: 3px; margin-bottom: 5px }
+.pgroup header strong { font: 400 1.02rem var(--display); letter-spacing: .01em }
+.pgroup header span { font-size: .86rem; color: var(--faded); white-space: nowrap }
+.chg { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 8px; padding: 4px 6px; font-size: .95rem; align-items: start }
 .chg.b { background: var(--buff-wash) } .chg.n { background: var(--nerf-wash) }
-.tag { width: 24px; height: 22px; border-radius: 3px; border: 1px solid var(--rule); background: var(--sheet); color: var(--faded); cursor: pointer; padding: 0; font: 700 0.75rem var(--text) }
+.tag { width: 24px; height: 22px; border: 1px solid var(--rule); background: var(--sheet); color: var(--faded); cursor: pointer; padding: 0; font: 700 .75rem var(--text) }
 .chg.b .tag { color: var(--buff); border-color: currentColor } .chg.n .tag { color: var(--nerf); border-color: currentColor }
-.blank { padding: 28px 18px; color: var(--faded) }
+.blank { padding: 26px 20px; color: var(--faded) }
 .blank p { margin: 0 0 12px; max-width: 34ch }
-.quick { display: flex; flex-wrap: wrap; gap: 6px }
+.quick { display: flex; flex-wrap: wrap; gap: 8px }
 .quick button { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50% }
 
-/* tier list */
-.tierhead { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin-bottom: 16px }
-.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden }
-.seg button { font: 600 0.95rem var(--text); background: var(--sheet); color: var(--faded); border: 0; padding: 7px 14px; cursor: pointer }
+/* tier list: a wall of postcards */
+.tierhead { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin-bottom: 18px }
+.seg { display: inline-flex; border: 1px solid var(--rule) }
+.seg button { font: 500 .95rem var(--text); background: var(--sheet); color: var(--faded); border: 0; padding: 7px 14px; cursor: pointer }
 .seg button + button { border-left: 1px solid var(--rule) }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--ground) }
-.caption { color: var(--faded); font-size: 0.95rem }
-.tiers { display: grid; gap: 6px }
-.tier { display: grid; grid-template-columns: 76px minmax(0, 1fr); background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden }
-.tier .letter { display: grid; place-items: center; font: 400 2.6rem/1 var(--deco); color: #fff; background: var(--tc); text-shadow: 0 2px 0 #0003 }
-.tier .cards { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; min-height: 60px; align-content: start }
-.card { width: 84px; border: 0; padding: 0; background: none; color: var(--ink); cursor: pointer; text-align: left; font: inherit }
-.card img { width: 84px; aspect-ratio: 280 / 380; max-width: 100%; object-fit: cover; border-radius: 3px; background: color-mix(in srgb, var(--hc) 55%, var(--sheet)); }
-.card:hover img { outline: 2px solid var(--tc); outline-offset: 1px }
-.card b { display: block; font-size: 0.85rem; font-weight: 600; line-height: 1.15; margin-top: 4px; overflow-wrap: anywhere }
-.card small { display: block; font-size: 0.8rem; color: var(--faded); font-variant-numeric: tabular-nums }
-@media (max-width: 520px) { .tier { grid-template-columns: 48px minmax(0, 1fr) } .tier .letter { font-size: 1.8rem } .card, .card img { width: 64px } }
-.foot { padding-block: 0 40px; color: var(--faded); font-size: 0.88rem } .foot p { max-width: 80ch; margin: 0; border-top: 1px solid var(--rule); padding-top: 14px } .foot a { color: var(--brass) }
-.note { color: var(--faded); font-size: 0.92rem; margin-top: 14px; max-width: 75ch }
+.seg button[aria-pressed="true"] { background: var(--cyan); color: #100e0e }
+.caption { color: var(--faded); font-size: .95rem }
+.tiers { display: grid; gap: 10px }
+.tier { display: grid; grid-template-columns: 84px minmax(0, 1fr); background: var(--sheet); border: 1px solid var(--rule) }
+.tier .letter { display: grid; place-items: center; font: 400 3.2rem/1 var(--display); color: var(--tt); background: var(--tc); text-shadow: 2px 2px 0 #100e0e55 }
+.tier .cards { display: flex; flex-wrap: wrap; gap: 14px 12px; padding: 14px 12px; min-height: 60px; align-content: start }
+.card { width: 92px; border: 0; padding: 0; background: none; color: var(--ink); cursor: pointer; text-align: left; font: inherit }
+.card img { width: 92px; max-width: 100%; aspect-ratio: 280 / 380; object-fit: cover; background: var(--hc); border: 4px solid var(--frame); border-bottom-width: 6px; box-shadow: 0 8px 16px -10px #000c; transform: rotate(var(--tilt, 0deg)) }
+.card:nth-child(odd) { --tilt: -1.6deg } .card:nth-child(even) { --tilt: 1.3deg }
+.card:hover img, .card:focus-visible img { transform: rotate(0) }
+.card b { display: block; font: 400 .95rem/1.1 var(--display); margin-top: 6px; overflow-wrap: anywhere; letter-spacing: .01em }
+.card small { display: block; font-size: .8rem; color: var(--faded); font-variant-numeric: tabular-nums }
+@media (max-width: 520px) { .tier { grid-template-columns: 52px minmax(0, 1fr) } .tier .letter { font-size: 2.2rem } .card, .card img { width: 68px } }
+.note { color: var(--faded); font-size: .92rem; margin-top: 14px; max-width: 75ch }
 
-/* patches */
-.patch { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; margin-bottom: 10px }
-.patch summary { cursor: pointer; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; list-style: none }
+/* patch notes: a route of numbered stops */
+.route { position: relative; padding-left: 52px }
+.route::before { content: ""; position: absolute; left: 19px; top: 10px; bottom: 10px; border-left: 3px dotted var(--cyan); opacity: .7 }
+.patch { position: relative; background: var(--sheet); border: 1px solid var(--rule); margin-bottom: 14px }
+.stopnum { position: absolute; left: -52px; top: 10px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--cyan); color: #100e0e; font: 400 1.15rem/1 var(--display); box-shadow: 0 0 0 4px var(--ground) }
+.patch summary { cursor: pointer; padding: 13px 16px; display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; list-style: none }
 .patch summary::-webkit-details-marker { display: none }
-.patch summary strong { font: 400 1.35rem var(--deco) }
-.patch summary span { color: var(--faded); font-size: 0.92rem }
-.faces { display: flex; margin-left: auto }
-.faces img { margin-left: -6px; border: 2px solid var(--sheet) }
-.patch .body { padding: 0 16px 16px; max-width: 900px }
-.patch h4 { font: 600 1.05rem var(--text); color: var(--brass); margin: 16px 0 4px }
-.ln { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 2px 0; align-items: start }
+.patch summary strong { font: 400 1.4rem var(--display); letter-spacing: .01em }
+.patch summary > span:not(.stopnum) { color: var(--faded); font-size: .92rem }
+.faces { display: flex; margin-left: auto; align-items: center }
+.faces img { margin-left: -6px }
+.patch .body { padding: 0 16px 16px; max-width: 920px }
+.patch h4 { font: 400 1.12rem var(--display); color: var(--cyan); margin: 18px 0 4px; letter-spacing: .01em }
+.ln { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 2px 0; align-items: start; font-size: .96rem }
 .ln .mark { width: 22px; text-align: center; font-weight: 700 }
-.ln.h { grid-template-columns: 22px minmax(0, 1fr) }
-.patch a { color: var(--brass); font-weight: 600 }
-mark { background: color-mix(in srgb, var(--brass) 38%, transparent); color: inherit; border-radius: 2px }
+.patch a { font-weight: 600 }
+mark { background: var(--hl); color: #100e0e; padding: 0 2px }
+@media (max-width: 520px) { .route { padding-left: 38px } .route::before { left: 13px } .stopnum { left: -38px; width: 28px; height: 28px; font-size: .9rem } }
+
+.foot { padding-block: 0 40px; color: var(--faded); font-size: .88rem }
+.foot p { max-width: 80ch; margin: 0; border-top: 1px dashed var(--rule); padding-top: 16px }
 @media (prefers-reduced-motion: no-preference) { .dossier .head { animation: rise .25s ease-out } @keyframes rise { from { opacity: .4; transform: translateY(4px) } } }
 </style>
 </head>
 <body>
 
-<header class="wrap top">
-  <div>
-    <h1>Deadlock Patchwatch</h1>
-    <p class="sub" id="sub">Every Deadlock hero buff and nerf from every official patch since November 2024, with a running buff score for each hero and a win-rate tier list.</p>
+<div class="mast"><div class="wrap">
+  <span class="brand">Deadlock Patchwatch</span>
+  <small>Fan-made patch tracker. Not affiliated with Valve.</small>
+</div></div>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <h1 class="title"><span class="small">Deadlock</span>Patchwatch</h1>
+      <span class="sticker">Updated daily</span>
+    </div>
+    <div>
+      <p class="intro" id="sub">Every Deadlock hero buff and nerf from every official patch since November 2024, with a running buff score for each hero and a win-rate tier list.</p>
+      <label class="range" for="since">Count changes made since
+        <select id="since"></select></label>
+    </div>
   </div>
-  <label class="range" for="since">Count changes made since
-    <select id="since"></select></label>
+  <div class="wrap strip-wrap">
+    <p class="strip-cap" id="stripCap">Most buffed heroes</p>
+    <div class="strip" id="strip"></div>
+  </div>
 </header>
 
 <div class="bar"><div class="wrap">
@@ -197,7 +258,7 @@ mark { background: color-mix(in srgb, var(--brass) 38%, transparent); color: inh
     <p class="note" id="tierNote"></p>
   </section>
 
-  <section id="view-patches" hidden><div id="patchList"></div></section>
+  <section id="view-patches" hidden><div class="route" id="patchList"></div></section>
 </main>
 
 <footer class="wrap foot">
@@ -290,7 +351,7 @@ function renderDetail() {
     if (items.length) groups.push({ p, items, pnet });
   }
   const st = computeHeroes().find(r => r.hero === selHero);
-  el.innerHTML = `<div class="head" style="--hc:${hc(selHero)}">${cardImg(selHero, "portrait")}
+  el.innerHTML = `<div class="head" style="--hc:${hc(selHero)}"><span class="frame">${cardImg(selHero, "portrait")}</span>
       <div><h2>${esc(selHero)}</h2><div class="stats">
         <div><span>Net buffs</span><b class="${cls(cum)}">${signed(cum)}</b></div>
         <div><span>Win rate</span><b>${st?.wr != null ? (st.wr * 100).toFixed(1) + "%" : "–"}</b></div>
@@ -302,7 +363,7 @@ function renderDetail() {
       ${g.items.map(({ l, i, s }) => `<div class="chg ${s > 0 ? "b" : s < 0 ? "n" : ""}"><button class="tag" data-key="${lineKey(g.p, i)}" data-s="${s}" aria-label="Tagged ${s > 0 ? "buff" : s < 0 ? "nerf" : "neutral"}, click to change">${s > 0 ? "▲" : s < 0 ? "▼" : "•"}</button><span>${hl(l.t.replace(/^[^:]+:\s*/, ""), q)}</span></div>`).join("")}</div>`).join("") || `<p class="hint">No changes to ${esc(selHero)} match in this range.</p>`}</div>`;
 }
 
-const TIERS = [["S", "--tS"], ["A", "--tA"], ["B", "--tB"], ["C", "--tC"], ["D", "--tD"], ["F", "--tF"]];
+const TIERS = [["S", "--tS", "#fff7ea"], ["A", "--tA", "#100e0e"], ["B", "--tB", "#100e0e"], ["C", "--tC", "#100e0e"], ["D", "--tD", "#100e0e"], ["F", "--tF", "#fff7ea"]];
 function renderTiers() {
   document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === tierMode));
   let rows = computeHeroes();
@@ -313,7 +374,7 @@ function renderTiers() {
   const cut = [1.25, 0.5, -0.1, -0.7, -1.3], buckets = TIERS.map(() => []);
   rows.sort((a, b) => b.score - a.score).forEach(r => { const t = cut.findIndex(c => r.score >= c); buckets[t < 0 ? 5 : t].push(r) });
   const val = r => tierMode === "net" ? `${signed(r.net)} net` : tierMode === "wr" ? `${(r.wr * 100).toFixed(1)}%` : `${(r.wr * 100).toFixed(1)}%, ${signed(r.net)}`;
-  $("#tiers").innerHTML = TIERS.map(([t, c], i) => `<div class="tier" style="--tc:var(${c})"><div class="letter">${t}</div><div class="cards">${buckets[i].map(r => `<button class="card" data-hero="${esc(r.hero)}">${cardImg(r.hero)}<b>${esc(r.hero)}</b><small>${val(r)}</small></button>`).join("") || `<span class="caption">Nobody here right now.</span>`}</div></div>`).join("");
+  $("#tiers").innerHTML = TIERS.map(([t, c, tt], i) => `<div class="tier" style="--tc:var(${c});--tt:${tt}"><div class="letter">${t}</div><div class="cards">${buckets[i].map(r => `<button class="card" data-hero="${esc(r.hero)}">${cardImg(r.hero)}<b>${esc(r.hero)}</b><small>${val(r)}</small></button>`).join("") || `<span class="caption">Nobody here right now.</span>`}</div></div>`).join("");
   $("#tierCaption").textContent = tierMode === "net" ? `Net buffs since ${fmtDate($("#since").value)}` : tierMode === "wr" ? `Win rate, all ranks, ${fmtDate(D.statsSince)} to ${fmtDate(D.generated)}` : "Weighted 70% win rate, 30% net buffs";
   $("#tierNote").textContent = tierMode === "net"
     ? "Tiers show how far each hero's net buff count sits from the average for the selected range. A high tier means Valve has been buffing them, not that they're strong."
@@ -336,7 +397,8 @@ function renderPatches() {
     }
     if ((only || q) && !body.length) return "";
     const touched = [...new Set(p.lines.filter(l => l.hero).map(l => l.hero))];
-    return `<details class="patch" ${idx === 0 || only || q ? "open" : ""}><summary><strong>${esc(p.title)}</strong><span>${fmtDate(p.date)}, ${touched.length ? `${touched.length} heroes changed` : "no hero changes"}</span>
+    const n = D.patches.indexOf(p) + 1;
+    return `<details class="patch" ${idx === 0 || only || q ? "open" : ""}><summary><span class="stopnum" title="Patch ${n} of ${D.patches.length}">${n}</span><strong>${esc(p.title)}</strong><span>${fmtDate(p.date)}, ${touched.length ? `${touched.length} heroes changed` : "no hero changes"}</span>
       <span class="faces">${touched.slice(0, 10).map(h => face(h, 22)).join("")}${touched.length > 10 ? `<span>&nbsp;+${touched.length - 10}</span>` : ""}</span></summary>
       <div class="body">${body.join("")}<p><a href="${esc(p.url)}" target="_blank" rel="noopener">Read the original post on Steam</a></p></div></details>`;
   }).join("") || `<p class="caption">No patch notes match. Try a different search or an earlier start date.</p>`;
@@ -349,7 +411,12 @@ function setView(v) {
   if (location.hash.slice(1) !== v) history.replaceState(null, "", "#" + v);
   renderAll();
 }
-function renderAll() { const v = view(); if (v === "heroes") { renderTable(); renderDetail() } else if (v === "tiers") renderTiers(); else renderPatches() }
+function renderStrip() {
+  const top = computeHeroes().filter(r => r.net > 0).sort((a, b) => b.net - a.net).slice(0, 10);
+  $("#stripCap").textContent = `Most buffed since ${fmtDate($("#since").value)}`;
+  $("#strip").innerHTML = top.map(r => `<button class="post" data-hero="${esc(r.hero)}" style="--hc:${hc(r.hero)}"><span class="score">${signed(r.net)}</span>${cardImg(r.hero)}<b>${esc(r.hero)}</b></button>`).join("");
+}
+function renderAll() { renderStrip(); const v = view(); if (v === "heroes") { renderTable(); renderDetail() } else if (v === "tiers") renderTiers(); else renderPatches() }
 function pickHero(h) { selHero = h; if (view() !== "heroes") setView("heroes"); else renderAll(); if (innerWidth <= 920) $("#detail").scrollIntoView({ behavior: "smooth" }) }
 
 Promise.all([fetch("data.json").then(r => r.json()), fetch("heroes-meta.json").then(r => r.json()).catch(() => ({}))]).then(([data, meta]) => {
@@ -372,6 +439,7 @@ $("#q").oninput = renderAll;
 document.querySelectorAll("#heroTable th").forEach(th => th.onclick = () => { sortDir = sortK === th.dataset.k ? -sortDir : (th.dataset.k === "hero" ? 1 : -1); sortK = th.dataset.k; renderTable() });
 $("#heroTable tbody").addEventListener("click", e => { const tr = e.target.closest("tr"); if (tr) pickHero(tr.dataset.hero) });
 $("#heroTable tbody").addEventListener("keydown", e => { if (e.key === "Enter") { const tr = e.target.closest("tr"); if (tr) pickHero(tr.dataset.hero) } });
+$("#strip").addEventListener("click", e => { const c = e.target.closest(".post"); if (c) pickHero(c.dataset.hero) });
 $("#tiers").addEventListener("click", e => { const c = e.target.closest(".card"); if (c) pickHero(c.dataset.hero) });
 document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { tierMode = b.dataset.mode; store.set("tierMode", tierMode); renderTiers() });
 $("#detail").addEventListener("click", e => {

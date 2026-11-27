@@ -23,10 +23,10 @@ Each hero change is tagged +1 (buff), −1 (nerf) or 0 automatically from its wo
 The site is static files in `site/`. It loads `data.json` with `fetch`, so serve it rather than opening the file directly:
 
 ```
-python -m http.server 8765 -d site
+python -m http.server 8766 -d site
 ```
 
-Then open http://localhost:8765.
+Then open http://localhost:8766.
 
 ## Deploying and data refresh
 

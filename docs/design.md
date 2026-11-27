@@ -1,40 +1,47 @@
 # Design
 
-The look is a 1920s precinct ledger, taken from Deadlock's occult New York: verdigris ground,
-brass for emphasis, paper-coloured text. Hero portraits carry the colour; the rest stays quiet.
+The look follows Valve's "City Never Sleeps" update page as broken down in the owner's design
+study (`Deadlock_Design_Study.pdf`, captured 2026-11-27): a printed city guide on ink-black paper
+with grain, cream type, postcard-framed art, cyan route markers and dashed HUD callouts.
+This is a fan site, so it borrows the language, not Valve's logos or title artwork.
 
 ## Tokens (top of `site/index.html`)
 
-| Token | Light | Dark | Use |
-|-------|-------|------|-----|
-| `--ground` | #e4ebe6 | #13201d | page background |
-| `--sheet` | #f2f5f1 | #1a2a26 | tables, panels, cards |
-| `--ink` | #16241f | #ebe4cf | text |
-| `--faded` | #5b6b64 | #93a39b | secondary text |
-| `--rule` | #c6d3cb | #2b3d38 | borders |
-| `--brass` | #8a6420 | #d1ad62 | accent, selection, links |
-| `--buff` / `--nerf` | #12775b / #ad3727 | #6fdcbc / #f0735f | buff and nerf only |
-| `--tS` ... `--tF` | | | tier letter colours |
+| Token | Dark (default look) | Light (cream paper) | Use |
+|-------|---------------------|---------------------|-----|
+| `--ground` | #100E0E ink | #F7E9D5 cream | page background |
+| `--sheet` | #1A1716 | #FDF5E8 | tables, panels |
+| `--ink` | #F7E9D5 | #100E0E | text |
+| `--faded` | #B3A38F | #6B5C4C | secondary text |
+| `--rule` | cream at 13% | #E0CCB0 | borders, dashed callouts |
+| `--frame` | #F7E9D5 | #FFFAF1 | postcard frames, title fill |
+| `--cyan` | #60CDE3 | #1B7D91 | navigation: active tab, sort arrow, route stops, selection |
+| `--buff` | #97DA79 | #3B7C25 | buffs only |
+| `--nerf` | #E3633C | #C2471F | nerfs only |
+| `--hl` | #FFE14D | #FFE14D | search highlight |
+| `--sticker` | #E3633C | #E3633C | the "Updated daily" sticker and title shadow |
+| tiers | S #E3633C, A #FFE14D, B #97DA79, C #60CDE3, D #B9A68C, F #8C7B8F | | tier letters |
 
-Both themes follow `prefers-color-scheme`, and `data-theme` on the root overrides it.
+Reference colours from the study: ink #100E0E, cream #F7E9D5, blue #60CDE3, green #97DA79,
+yellow #FFE14D, sticker orange ~#E3633C. Light-theme versions are darkened for contrast on cream.
 
 ## Type
 
-- Limelight (art-deco display) only for the site title, the hero name in the panel, patch titles
-  and tier letters.
-- Barlow Semi Condensed for everything else, with tabular numbers in tables.
-- Sentence case everywhere; no all-caps labels and no monospace labels.
+- Lilita One stands in for Valve's Oracle (not publicly available): title, hero names, patch titles,
+  tabs, tier letters, stat numbers.
+- Jost for body text (the reference uses Jost too), 17px base.
+- Sentence case everywhere.
 
 ## Layout
 
-- Header: title and intro on the left, the "Count changes made since" picker on the right.
-- Sticky bar: tabs (Heroes, Tier list, Patch notes), hero filter, search.
-- Heroes: sortable table on the left, hero panel on the right (stacks under 920px).
-- Tier list: one row per tier, hero portrait cards inside.
-- Patch notes: one collapsible block per patch, hero lines start with the hero's icon.
-- Green and red mean buff and nerf and nothing else.
-
-## Hero art
-
-Portraits (`*-sm.webp` 128×128, `*-card.webp` 280×380) and each hero's colour come from the
-Deadlock API assets. They are game art owned by Valve, used on a fan site.
+- Masthead: compact black strip with the name and the fan-site note.
+- Hero: oversized postcard-lettered title (cream fill, ink outline, orange offset shadow, sizes in
+  `em` so it scales), a tilted orange sticker, the intro and range picker, then a strip of tilted
+  portrait postcards for the most-buffed heroes in the selected range.
+- Sticky bar: tabs with a cyan underline, hero filter, search.
+- Heroes: sortable table; hero panel with the portrait in a tilted postcard frame and stats in
+  dashed HUD callouts.
+- Tier list: tier letter blocks in their own colours, hero postcards tilted alternately.
+- Patch notes: a dotted cyan route with numbered stops (patch number in chronological order).
+- Grain: a static SVG noise overlay; no texture animation.
+- Motion: postcards straighten on hover/focus only, and only without reduced motion.
