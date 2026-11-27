@@ -16,11 +16,25 @@ def get(url, path):
 
 news = get("https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1422450&count=1000&maxlength=0&format=json", "data/steam.json")["appnews"]["newsitems"]
 heroes = get("https://api.deadlock-api.com/v1/assets/heroes", "data/heroes.json")
-since = int(time.time()) - 14 * 86400
-stats = get(f"https://api.deadlock-api.com/v1/analytics/hero-stats?min_unix_timestamp={since}", "data/herostats.json")
+NOW = int(time.time())
+since = NOW - 14 * 86400
+STATS_URL = "https://api.deadlock-api.com/v1/analytics/hero-stats"
+stats = get(f"{STATS_URL}?min_unix_timestamp={since}", "data/herostats.json")
+# Rank groups for the tier list. average_badge = rank tier * 10 + subrank (Archon = 7x, Phantom = 9x).
+RANKS = {"all": 0, "archon": 71, "phantom": 91}
+stats_by_rank = {"all": stats}
+for key, badge in RANKS.items():
+    if badge:
+        stats_by_rank[key] = get(f"{STATS_URL}?min_unix_timestamp={since}&min_average_badge={badge}", f"data/herostats_{key}.json")
 
 heroes = [h for h in heroes if h.get("player_selectable") and not h.get("disabled")]
 by_id = {h["id"]: h for h in heroes}
+
+# Hand-reviewed tags (scoring/reviewed_tags.json): exact line text -> {"tag": 1|-1|0, "why": ...}.
+# They win over the automatic rules; lines not in the file fall back to classify().
+REVIEWED = {}
+if os.path.exists("scoring/reviewed_tags.json"):
+    REVIEWED = json.load(open("scoring/reviewed_tags.json", encoding="utf-8"))
 
 # names as they appear in patch notes -> canonical hero name
 alias = {}
@@ -141,6 +155,31 @@ def classify(change):
         return 1
     return 0
 
+BY_PCT = re.compile(r"\b(increased|raised|improved|reduced|decreased|lowered)\b[^.%]{0,40}?\bby (\d+(?:\.\d+)?)%")
+SIMPLE_FROM_TO = re.compile(
+    r"\bfrom\s+\"?([-+]?\d*\.?\d+)\s*(m/s|m|s|%|x)?([^\d\"]{0,30}?)\s*\bto\s+\"?([-+]?\d*\.?\d+)\s*(m/s|m|s|%|x)?", re.I)
+
+def magnitude(change):
+    """How much the listed number moved, as a % of its old size. None when there's no clean pair."""
+    c = change.lower()
+    m = BY_PCT.search(c)
+    if m and " from " not in c:
+        pct = float(m.group(2))
+        return {"d": round(pct if m.group(1) in ("increased", "raised", "improved") else -pct)}
+    m = SIMPLE_FROM_TO.search(c)
+    if not m:
+        return None
+    # skip "from X to Y" where the units differ or the from-part names another stat ("+3m Radius to +1 Charge")
+    if (m.group(2) or "") != (m.group(5) or "") or re.search(r"[a-z]{4,}", m.group(3) or "") and "/boon" not in (m.group(3) or ""):
+        return None
+    a, b = float(m.group(1)), float(m.group(4))
+    if a == 0 or a == b:
+        return None
+    pct = (abs(b) - abs(a)) / abs(a) * 100
+    if abs(pct) > 1000:
+        return None
+    return {"d": round(pct), "v": [m.group(1) + (m.group(2) or ""), m.group(4) + (m.group(5) or "")]}
+
 ITEM_HEADERS = re.compile(r"item|weapon|vitality|spirit|general|map|misc|hud|ui|bug|matchmaking|ranked|neutral|trooper", re.I)
 
 patches = []
@@ -182,8 +221,14 @@ for n in sorted(news, key=lambda n: n["date"]):
             hero = ctx
             rec["t"] = f"{ctx}: {line}"
         if hero:
-            score = classify(change)
+            rev = REVIEWED.get(rec["t"])
+            score = rev["tag"] if rev else classify(change)
             rec.update({"hero": hero, "s": score})
+            if rev:
+                rec["r"] = 1  # hand-reviewed
+            mag = magnitude(change)
+            if mag:
+                rec.update(mag)
             hero_lines += 1
         raw_lines.append(rec)
     if not any(r.get("hero") for r in raw_lines) and len(n["contents"]) < 2500:
@@ -191,18 +236,46 @@ for n in sorted(news, key=lambda n: n["date"]):
     date = datetime.datetime.fromtimestamp(n["date"], datetime.UTC)
     patches.append({
         "id": n["gid"], "title": n["title"].strip(), "date": date.strftime("%Y-%m-%d"),
-        "url": n["url"], "lines": raw_lines,
+        "ts": n["date"], "url": n["url"], "lines": raw_lines,
     })
 
-stat_rows = []
-for s in stats:
-    h = by_id.get(s["hero_id"])
-    if not h or s["matches"] < 500:
+def stat_rows_of(raw, min_matches=500):
+    rows = []
+    for s in raw:
+        h = by_id.get(s["hero_id"])
+        if not h or s["matches"] < min_matches:
+            continue
+        rows.append({"hero": h["name"], "matches": s["matches"], "wins": s["wins"]})
+    return rows
+
+stat_rows = stat_rows_of(stats)
+
+# ---------- win rate before and after each patch that changed heroes ----------
+# Windows: up to 7 days each side, clipped at the neighbouring hero patches and at now.
+WEEK, DAY = 7 * 86400, 86400
+hero_patches = [p for p in patches if any(l.get("hero") for l in p["lines"])]
+wr_by_patch = {}
+for k, p in enumerate(hero_patches):
+    prev_ts = hero_patches[k - 1]["ts"] if k else 0
+    next_ts = hero_patches[k + 1]["ts"] if k + 1 < len(hero_patches) else NOW
+    before = (max(p["ts"] - WEEK, prev_ts), p["ts"])
+    after = (p["ts"], min(p["ts"] + WEEK, next_ts, NOW))
+    if before[1] - before[0] < DAY or after[1] - after[0] < DAY:
         continue
-    stat_rows.append({
-        "hero": h["name"], "matches": s["matches"], "wins": s["wins"],
-        "kills": s["total_kills"], "deaths": s["total_deaths"], "assists": s["total_assists"],
-    })
+    side = {}
+    for name, (a, b) in (("before", before), ("after", after)):
+        side[name] = get(f"{STATS_URL}?min_unix_timestamp={a}&max_unix_timestamp={b}", f"data/wr_{p['id']}_{name}.json")
+        if FETCH:
+            time.sleep(0.1)
+    rows = {}
+    for nm in ("before", "after"):
+        for s in side[nm]:
+            h = by_id.get(s["hero_id"])
+            if h:
+                rows.setdefault(h["name"], [0, 0, 0, 0])
+                o = 0 if nm == "before" else 2
+                rows[h["name"]][o:o + 2] = [s["wins"], s["matches"]]
+    wr_by_patch[p["id"]] = {"before": list(before), "after": list(after), "heroes": rows}
 
 out = {
     "generated": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d"),
@@ -210,6 +283,8 @@ out = {
     "heroes": sorted(h["name"] for h in heroes),
     "patches": patches,
     "stats": stat_rows,
+    "statsByRank": {k: stat_rows_of(v, 100) for k, v in stats_by_rank.items()},
+    "wrByPatch": wr_by_patch,
 }
 import os
 os.makedirs("site", exist_ok=True)
