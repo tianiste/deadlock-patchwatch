@@ -4,6 +4,21 @@ Why things are the way they are. Architecture decisions are presented to the own
 (options, trade-offs, recommendation) and recorded here once the owner has chosen.
 Newest first.
 
+## 2026-11-27: Hand-review every hero line; add win rate around patches, change sizes, rank filter
+
+- **Context:** The owner asked for buff/nerf tags to be "as accurate as possible" and for the three
+  proposed upgrades (win rate before/after each patch, change size per line, a better tier list).
+- **Options for accuracy:** keep tuning keyword rules (~89% measured) or review every line by hand
+  with two independent reviews and a judge for disagreements.
+- **Recommended and chosen:** full review (owner asked for subagents and maximum accuracy).
+  Results live in `scoring/reviewed_tags.json`; the rules stay as the fallback for new patches.
+- **Upgrades chosen by the owner:** all three ("fix all of these"). Change size is shown per line
+  rather than folded into a weighted score, because weighting different stats against each other
+  would be invented. Win rates are steadied toward the average with a 1,000-match prior.
+- **Consequences:** the data build makes about 45 more API calls (rank groups and two windows per
+  hero patch); `data.json` grew from ~445 KB to ~520 KB. New patches need a review pass to keep
+  every tag hand-checked.
+
 ## 2026-11-27: Deploy with GitHub Actions and refresh data daily
 
 - **Context:** The owner granted the `workflow` token scope so deploys and data refresh can run on
