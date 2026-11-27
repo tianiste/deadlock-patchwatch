@@ -57,7 +57,7 @@ LOWER_IS_BETTER = re.compile(
     r"cooldown|cast time|cast delay|cast point|windup|wind-up|wind up|delay|startup|charge time|"
     r"channel(ing)? time|lockout|reload time|reload duration|spread|recoil|cost|penalty|self[- ]damage|"
     r"time to|ramp[- ]?up time|backswing|recovery|stamina cooldown|respawn|vulnerab|slower|"
-    r"debuff on (?:self|him|her)|travel time|arming time|lock-?on time|fuse", re.I)
+    r"debuff on (?:self|him|her)|travel time|arming time|lock-?on time|fuse|(?:deploy|activation|spawn) time|time between", re.I)
 UP = re.compile(r"\b(increased|increase|increases|raised|buffed|improved|extended|longer|faster|more)\b", re.I)
 DOWN = re.compile(r"\b(reduced|reduce|reduces|decreased|decrease|decreases|lowered|nerfed|shorter|slower|less|fewer)\b", re.I)
 NUM = r"[-+]?\d*\.?\d+"
@@ -65,11 +65,14 @@ FROM_TO = re.compile(r"from\s+\"?([-+]?\d*\.?\d+)[^\s\"]*\"?.*?\bto\s+\"?([-+]?\
 
 def classify(change):
     c = change.lower()
-    if re.match(r"^(fixed|fix |fixes)", c) or "visual" in c or "tooltip" in c or " vfx" in c or " fx " in c or "sound" in c or "audio" in c or "animation" in c or "model" in c and "hitbox" not in c:
+    if re.match(r"^(fixed|fix |fixes)", c) or "visual" in c or "tooltip" in c or " vfx" in c or " fx " in c or "sound" in c or "audio" in c or re.search(r"\banimations?\b|\bvolume\b|\bvo\b|voice ?lines?", c) or "model" in c and "hitbox" not in c:
+        return 0
+    if re.search(r"\b(?:cast|channel) bar\b|\bicon\b|\bhud\b|\bupdated (?:\w+ )?effects\b", c):
         return 0
     if c.startswith("reworked") or "rescaled" in c or "redistributed" in c:
         return 0
-    if re.search(r"changed from|is now \"|now (?:is|works|uses|scales)", c):
+    same_stat = re.search(r"changed from [^\"]*? to \"?[-+]?\d*\.?\d+[a-z%]*\"?\.?$", c)
+    if not same_stat and re.search(r"\bchanged from\b|\bis now \"|\bnow (?:is|works|uses)\b", c):
         return 0
     nl = re.search(r"\bno longer\b(.*)", c)
     if nl:
@@ -118,7 +121,23 @@ def classify(change):
         return direction
     if re.search(r"\bno longer\b", c):
         return -1 if not re.search(r"no longer (?:has|have|suffers?|loses?|gets? interrupted|interrupt|consumes?|requires?|costs?|penal|slows? (?:you|him|her|self)|self)", c) else 1
+    if re.search(r"\bhalf damage\b|\b(?:does|deals) half\b", c):
+        return -1
     if re.search(r"\bnow also\b|\badditionally\b|\bnow (?:grants|gives|applies|deals|heals|pierces|stuns|silences|ignores|can)\b|\bcan now\b|\badded\b", c):
+        return 1
+    # Same total effect, only redistributed ("half now, half over 3s, same overall damage")
+    if re.search(r"same (?:overall|total)|same damage", c):
+        return 0
+    if re.search(r"now only (?:goes on cooldown|slowed)|\bstarts? on cooldown\b", c):
+        return 1 if "now only" in c else -1
+    if re.search(r"now has -\d[\d.]*% (?:base )?(?:bullet|spirit) resist", c):
+        return -1
+    # New drawbacks ("now slows your dash usage", "does half damage to objectives")
+    if re.search(r"\bnow (?:slows? (?:your|you)|costs?|requires?|only)\b|\b(?:does|deals) half\b|"
+                 r"\bhalf damage\b|\bnow breaks?\b|\bcan only\b|\bcan be (?:dispelled|interrupted|destroyed|purged)\b", c):
+        return -1
+    # New behaviour that helps ("now starts charged", "now scales with spirit power", "allows movement")
+    if re.search(r"\bnow (?:starts?|scales|allows|causes|lets you|has|reflects?|refunds?|resets?|counts|triggers|affects)\b|\ballows?\b|\bagain\b", c):
         return 1
     return 0
 

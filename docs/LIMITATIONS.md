@@ -6,7 +6,7 @@ limitation when it is found; remove it when it is fixed.
 | Limitation | Effect for the user | Why / blocked on | Since |
 |------------|---------------------|------------------|-------|
 | No patches before 2024-11-08, and minor patches posted only on the forum are missing | A hero's history starts in Nov 2024 and skips some small 2025 hotfixes | Only the Steam news API is fetchable; forum and wiki block scripts | 2026-11-27 |
-| Buff/nerf tags are guessed from wording | Some lines are tagged wrong or neutral, especially "changed from X to Y" upgrade swaps | Heuristic rules in `classify()` | 2026-11-27 |
+| Buff/nerf tags are guessed from wording | About 8–10% of hero lines are tagged wrong (measured 2026-11-27); upgrade swaps ("changed from X to Y") count as neutral even when one side is clearly better | Heuristic rules in `classify()`; see `docs/scoring.md` | 2026-11-27 |
 | Every change counts as one point | A 1% tweak and a full rework weigh the same in net buffs | No model of each stat's value | 2026-11-27 |
 | Tag corrections are saved only in the viewer's browser | Fixes made on the page don't reach other people or the repo | Static site, no backend | 2026-11-27 |
 | Data refreshes once a day | A patch can take up to a day to appear on the site | Daily schedule in the Pages workflow | 2026-11-27 |
